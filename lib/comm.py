@@ -73,6 +73,7 @@ async def get_transactions():
         transactions = []
         for row in rows:
             transactions.append({
+                "id": row[0],
                 "content": row[1],
                 "currency": row[2],
                 "amount": row[3],

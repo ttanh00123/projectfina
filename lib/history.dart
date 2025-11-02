@@ -46,9 +46,94 @@ class _HistoryPageState extends State<HistoryPage> {
     print('Edit transactions: $_selectedTransactions');
   }
 
-  void _deleteSelectedTransactions() {
-    // Placeholder for delete functionality
+  Future<void> _deleteSelectedTransactions() async {
+    // Confirm with the user
     print('Delete transactions: $_selectedTransactions');
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete ${_selectedTransactions.length} transaction(s)?'),
+        content: const Text('This action cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Delete')),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true) return;
+
+    if (_selectedTransactions.isEmpty) return;
+
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
+
+    try {
+      // Collect selected indices and sort descending so removals don't shift later indices
+      final indices = _selectedTransactions.toList()..sort((a, b) => b.compareTo(a));
+
+      // Map indices to ids (assumes each transaction has an 'id' field)
+      final ids = <int>[];
+      for (final i in indices) {
+        if (i >= 0 && i < _transactions.length) {
+          final idVal = _transactions[i]['id'];
+          if (idVal is int) ids.add(idVal);
+          print('Delete transactions: $idVal');
+        }
+      }
+
+      if (ids.isEmpty) {
+        // Nothing we can delete on server side; inform user
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No valid IDs found for selected transactions.')));
+        return;
+      }
+
+      // Send DELETE requests in parallel
+      final responses = await Future.wait(ids.map((id) => http.delete(Uri.parse('http://127.0.0.1:8000/deleteTransaction/$id'))));
+
+      // Check results
+      bool anyFailure = false;
+      for (final r in responses) {
+        if (r.statusCode != 200 && r.statusCode != 204) {
+          anyFailure = true;
+          break;
+        }
+      }
+
+      // Remove local entries for successful deletions
+      if (mounted) {
+        setState(() {
+          for (final idx in indices) {
+            if (idx >= 0 && idx < _transactions.length) {
+              _transactions.removeAt(idx);
+            }
+          }
+          _selectedTransactions.clear();
+          _isLoading = false;
+        });
+      }
+
+      if (anyFailure) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Some deletions failed on the server.')));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Selected transactions deleted.')));
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error deleting transactions: $e')));
+    }
   }
 
   @override

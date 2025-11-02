@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:typed_data';
 import 'home.dart';
 class AddTransaction extends StatefulWidget {
   const AddTransaction({super.key});
@@ -269,15 +268,9 @@ class _SecondRouteState extends State<SecondRoute> {
               TextFormField(
                 controller: finalTextController,
                 decoration: InputDecoration(
-                  labelText: 'Notes',
+                  labelText: 'Notes (optional)',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter some text';
-                  }
-                  return null;
-                },
               ),
               Spacer(),
               Row(
@@ -285,7 +278,8 @@ class _SecondRouteState extends State<SecondRoute> {
                 children: [
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const Home()));
+                      // Redirect back to Home without stacking another route
+                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const Home()));
                     },
                     style: ButtonStyle(
                       shape: MaterialStateProperty.all<RoundedRectangleBorder>(
@@ -299,6 +293,7 @@ class _SecondRouteState extends State<SecondRoute> {
                   ),
                   ElevatedButton(
                     onPressed: () {
+                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const Home()));
                       if (_formKey.currentState!.validate()) {
                         // Handle form submission here
                         _submitForm();
