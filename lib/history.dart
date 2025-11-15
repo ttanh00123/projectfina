@@ -16,7 +16,7 @@ class _HistoryPageState extends State<HistoryPage> {
   // Function to fetch transactions from the API
   Future<void> fetchTransactions() async {
     try {
-      final response = await http.get(Uri.parse('http://127.0.0.1:8000/transactions'));
+      final response = await http.get(Uri.parse('http://127.0.0.1:8001/transactions'));
       if (response.statusCode == 200) {
         setState(() {
           _transactions = json.decode(response.body);

@@ -1,11 +1,9 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional
+from datetime import date
 import pyodbc
-import io
-from fastapi import Request
-from fastapi.responses import HTMLResponse
 from lib.graphmaker import create_dash_app
 from starlette.middleware.wsgi import WSGIMiddleware
 app = FastAPI()
@@ -43,20 +41,29 @@ class Transaction(BaseModel):
     currency: str
     amount: float
     type: str
-    date: str
+    date: Optional[str] = None
     category: str
     tags: str
-    notes: str
+    notes: Optional[str] = None
 
 @app.post("/addTransaction")
 async def add_transaction(transaction: Transaction):
     try:
         conn = get_conn()
         cursor = conn.cursor()
+        # Fill optional fields with defaults if missing
+        tx_date = transaction.date
+        if not tx_date:
+            tx_date = date.today().isoformat()
+
+        tx_notes = transaction.notes
+        if tx_notes is None:
+            tx_notes = 'None'
+
         cursor.execute('''
             INSERT INTO transactions (content, currency, amount, type, date, category, tags, notes)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', transaction.content, transaction.currency, transaction.amount, transaction.type, transaction.date, transaction.category, transaction.tags, transaction.notes)
+        ''', transaction.content, transaction.currency, transaction.amount, transaction.type, tx_date, transaction.category, transaction.tags, tx_notes)
         conn.commit()
         return {"message": "Transaction added successfully"}
     
@@ -111,6 +118,12 @@ async def get_plotly_json():
 async def health_check():
     return {"status": "healthy"}
 
+@app.post("/parse")
+async def parse_expense(request: Request):
+    data = await request.json()
+    text = data.get("text", "")
+    
+    return {"expenses": expenses}
 
 @app.get("/")
 async def read_root():

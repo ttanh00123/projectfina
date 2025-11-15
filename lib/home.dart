@@ -50,14 +50,31 @@ class _MainAppState extends State<MainApp> {
       body: Center(
         child: _pages.elementAt(_selectedIndex),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
+      floatingActionButton: GestureDetector(
+        onLongPress: () {
+          // Long-press -> open quick add page that hosts AddTransaction
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const SecondRoute()),
+            MaterialPageRoute(
+              builder: (context) => Scaffold(
+                appBar: AppBar(title: const Text('Quick Add Transaction')),
+                body: const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: AddTransaction(),
+                ),
+              ),
+            ),
           );
         },
-        child: const Icon(Icons.add),
+        child: FloatingActionButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const SecondRoute()),
+            );
+          },
+          child: const Icon(Icons.add),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(

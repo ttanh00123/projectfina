@@ -10,25 +10,210 @@ class AddTransaction extends StatefulWidget {
 }
 
 class _AddTransactionState extends State<AddTransaction> {
-  String _displayText = 'This is ka stateful widget!';
+  final TextEditingController promptController = TextEditingController();
+  Map<String, dynamic>? generatedTransaction;
+  bool _isGenerating = false;
+  bool _isPosting = false;
+  String? _error;
 
-  void _updateText() {
-    setState(() {
-      _displayText = 'The text has been updated!';
-    });
+  Future<void> _generateTransaction() async {
+    final prompt = promptController.text.trim();
+    if (prompt.isEmpty) return;
+    if (mounted) {
+      setState(() {
+        _isGenerating = true;
+        _error = null;
+        generatedTransaction = null;
+      });
+    }
+
+    try {
+      final url = Uri.parse('http://127.0.0.1:8000/generate');
+      final resp = await http.post(url,
+          headers: {'Content-Type': 'application/json'}, body: json.encode({'prompt': prompt}));
+      if (resp.statusCode == 200) {
+        final respText = resp.body;
+        dynamic body;
+        // Try decode JSON directly first
+        try {
+          body = json.decode(respText);
+        } catch (_) {
+          // If direct decode fails, try to extract a JSON object or array substring
+          final objMatch = RegExp(r"\{[\s\S]*\}").firstMatch(respText);
+          final arrMatch = RegExp(r"\[[\s\S]*\]").firstMatch(respText);
+          String? jsonPart;
+          if (objMatch != null) jsonPart = objMatch.group(0);
+          else if (arrMatch != null) jsonPart = arrMatch.group(0);
+
+          if (jsonPart != null) {
+            try {
+              body = json.decode(jsonPart);
+            } catch (e2) {
+              // Try replacing single quotes with double quotes as a last resort
+              try {
+                final alt = jsonPart.replaceAll("'", '"');
+                body = json.decode(alt);
+              } catch (e3) {
+                body = respText; // give up, keep raw text
+              }
+            }
+          } else {
+            body = respText; // no JSON substring found
+          }
+        }
+
+        Map<String, dynamic>? tx;
+        if (body is Map<String, dynamic>) {
+          tx = body;
+        } else if (body is List && body.isNotEmpty && body[0] is Map) {
+          tx = Map<String, dynamic>.from(body[0]);
+        } else if (body is String) {
+          // Maybe the model returned a JSON string inside text
+          try {
+            final parsed = json.decode(body);
+            if (parsed is Map<String, dynamic>) tx = parsed;
+          } catch (_) {
+            // no-op
+          }
+        }
+
+        if (tx == null) throw Exception('Unexpected response format: $respText');
+
+        if (mounted) {
+          setState(() {
+            generatedTransaction = tx;
+            _isGenerating = false;
+          });
+        }
+      } else {
+        throw Exception('Generation failed: ${resp.statusCode}');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+          _error = e.toString();
+        });
+      }
+    }
+  }
+
+  Future<void> _confirmAddTransaction() async {
+    if (generatedTransaction == null) return;
+    if (mounted) {
+      setState(() {
+        _isPosting = true;
+        _error = null;
+      });
+    }
+
+    try {
+      final url = Uri.parse('http://127.0.0.1:8001/addTransaction');
+      final resp = await http.post(url,
+          headers: {'Content-Type': 'application/json'}, body: json.encode(generatedTransaction));
+      if (resp.statusCode == 200 || resp.statusCode == 201) {
+        if (mounted) {
+          setState(() {
+            _isPosting = false;
+          });
+        }
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction added.')));
+        Navigator.pop(context);
+      } else {
+        throw Exception('Failed to add: ${resp.statusCode}');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isPosting = false;
+          _error = e.toString();
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(_displayText),
-        ElevatedButton(
-          onPressed: _updateText,
-          child: const Text('Update Text'),
+    return Scaffold(
+      appBar: AppBar(title: const Text('AI Generate Transaction')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: promptController,
+              decoration: const InputDecoration(
+                labelText: 'Describe the transaction',
+                border: OutlineInputBorder(),
+              ),
+              minLines: 1,
+              maxLines: 4,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                ElevatedButton(
+                  onPressed: _isGenerating ? null : _generateTransaction,
+                  child: _isGenerating ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Generate'),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (_error != null) ...[
+              Text('Error: $_error', style: const TextStyle(color: Colors.red)),
+              const SizedBox(height: 12),
+            ],
+            if (generatedTransaction != null) ...[
+              Card(
+                elevation: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(generatedTransaction!['content'] ?? 'No content', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 6),
+                      Text('Amount: ${generatedTransaction!['amount'] ?? ''} ${generatedTransaction!['currency'] ?? ''}'),
+                      const SizedBox(height: 6),
+                      Text('Category: ${generatedTransaction!['category'] ?? ''}'),
+                      const SizedBox(height: 6),
+                      Text('Date: ${generatedTransaction!['date'] ?? ''}'),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: _isPosting ? null : _confirmAddTransaction,
+                    child: _isPosting ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Yes'),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: _isPosting
+                        ? null
+                        : () {
+                            setState(() {
+                              generatedTransaction = null;
+                            });
+                          },
+                    child: const Text('No'),
+                  ),
+                ],
+              ),
+            ] else ...[
+              const Expanded(child: SizedBox()),
+            ],
+          ],
         ),
-      ],
+      ),
     );
   }
 }
