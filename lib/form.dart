@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'home.dart';
+import 'speech_service.dart'; // adjust path if needed, e.g. 'package:yourapp/speech_service.dart'
+
 class AddTransaction extends StatefulWidget {
   const AddTransaction({super.key});
 
@@ -11,6 +13,13 @@ class AddTransaction extends StatefulWidget {
 
 class _AddTransactionState extends State<AddTransaction> {
   final TextEditingController promptController = TextEditingController();
+
+  // --- Speech service fields ---
+  final SpeechService _speechService = SpeechService();
+  bool _speechAvailable = false;   // true after successful init
+  bool _isListening = false;       // local listening state
+  // --------------------------------
+
   Map<String, dynamic>? generatedTransaction;
   bool _isGenerating = false;
   bool _isPosting = false;
@@ -133,6 +142,73 @@ class _AddTransactionState extends State<AddTransaction> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // init speech-to-text
+    _initSpeech();
+  }
+
+  Future<void> _initSpeech() async {
+    try {
+      final ok = await _speechService.init();
+      if (mounted) {
+        setState(() {
+          _speechAvailable = ok;
+        });
+      }
+    } catch (e) {
+      // keep _speechAvailable false; optionally log
+      debugPrint('Speech init failed: $e');
+    }
+  }
+
+  Future<void> _toggleListening() async {
+    if (!_speechAvailable) {
+      // optionally show message to user
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Speech not available')));
+      return;
+    }
+
+    if (_isListening) {
+      await _speechService.stop();
+      if (mounted) setState(() => _isListening = false);
+      return;
+    }
+
+    // Start listening; onResult receives recognized text and whether it's final
+    await _speechService.start((recognizedText, isFinal) {
+      if (mounted) {
+        setState(() {
+          // Update the prompt text but keep the caret at end
+          promptController.text = recognizedText;
+          promptController.selection = TextSelection.fromPosition(TextPosition(offset: recognizedText.length));
+        });
+
+        // Optionally auto-generate when final result arrives:
+        if (isFinal) {
+          // stop listening visual state
+          _speechService.stop();
+          _isListening = false;
+          // Optionally trigger generation automatically:
+          // _generateTransaction();
+        }
+      }
+    });
+
+    if (mounted) setState(() => _isListening = true);
+  }
+
+  @override
+  void dispose() {
+    promptController.dispose();
+    // Ensure speech stopped and resources released
+    if (_speechService.isListening) {
+      _speechService.stop();
+    }
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('AI Generate Transaction')),
@@ -142,9 +218,14 @@ class _AddTransactionState extends State<AddTransaction> {
           children: [
             TextField(
               controller: promptController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Describe the transaction',
                 border: OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: Icon(_isListening ? Icons.mic : Icons.mic_none, color: _isListening ? Colors.red : null),
+                  onPressed: _toggleListening,
+                  tooltip: _isListening ? 'Stop listening' : 'Start voice input',
+                ),
               ),
               minLines: 1,
               maxLines: 4,
