@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:typed_data';
+import 'session.dart';
 class AnalysisPage extends StatefulWidget {
   const AnalysisPage({super.key});
 
@@ -16,8 +17,13 @@ class _AnalysisPageState extends State<AnalysisPage> {
   // Function to fetch the pie chart image
   Future<void> fetchPieChart(String chartType) async {
   try {
+    final userId = Session.userId;
+    if (userId == null) {
+      setState(() { _isLoading = false; });
+      return;
+    }
     // Step 1: Fetch transactions from '/transactions'
-    final transactionsResponse = await http.get(Uri.parse('http://127.0.0.1:8000/transactions'));
+    final transactionsResponse = await http.get(Uri.parse('http://127.0.0.1:8001/transactions?user_id=$userId'));
     if (transactionsResponse.statusCode != 200) {
       throw Exception('Failed to fetch transactions');
     }

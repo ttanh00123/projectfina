@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'session.dart';
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
 
@@ -16,7 +17,19 @@ class _HistoryPageState extends State<HistoryPage> {
   // Function to fetch transactions from the API
   Future<void> fetchTransactions() async {
     try {
-      final response = await http.get(Uri.parse('http://127.0.0.1:8001/transactions'));
+      final userId = Session.userId;
+      if (userId == null) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse('http://127.0.0.1:8001/transactions?user_id=$userId'),
+      );
       if (response.statusCode == 200) {
         setState(() {
           _transactions = json.decode(response.body);
@@ -97,7 +110,7 @@ class _HistoryPageState extends State<HistoryPage> {
       }
 
       // Send DELETE requests in parallel
-      final responses = await Future.wait(ids.map((id) => http.delete(Uri.parse('http://127.0.0.1:8000/deleteTransaction/$id'))));
+      final responses = await Future.wait(ids.map((id) => http.delete(Uri.parse('http://127.0.0.1:8001/deleteTransaction/$id'))));
 
       // Check results
       bool anyFailure = false;

@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'home.dart';
 import 'speech_service.dart'; // adjust path if needed, e.g. 'package:yourapp/speech_service.dart'
+import 'session.dart';
 
 class AddTransaction extends StatefulWidget {
   const AddTransaction({super.key});
@@ -117,9 +118,30 @@ class _AddTransactionState extends State<AddTransaction> {
     }
 
     try {
+      final userId = Session.userId;
+      if (userId == null) {
+        if (mounted) {
+          setState(() {
+            _isPosting = false;
+            _error = 'Please log in again to add transactions.';
+          });
+        }
+        return;
+      }
+
+      final token = Session.token;
       final url = Uri.parse('http://127.0.0.1:8001/addTransaction');
-      final resp = await http.post(url,
-          headers: {'Content-Type': 'application/json'}, body: json.encode(generatedTransaction));
+      final resp = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: json.encode({
+          ...generatedTransaction!,
+          'user_id': userId,
+        }),
+      );
       if (resp.statusCode == 200 || resp.statusCode == 201) {
         if (mounted) {
           setState(() {
@@ -345,28 +367,53 @@ class _SecondRouteState extends State<SecondRoute> {
   }
 
   Future<void> _submitForm() async {
-    final url = Uri.parse('http://127.0.0.1:8000/addTransaction');
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'content': textController1.text,
-        'currency': dropdownValue0!['code'],
-        'amount': textController2.text,
-        'type': dropdownValue1,
-        'date': dateController.text,
-        'category': dropdownValue2,
-        'tags': dropdownValue3,
-        'notes': finalTextController.text,
-      }),
-    );
+    final userId = Session.userId;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in before adding transactions.')),
+      );
+      return;
+    }
 
-    if (response.statusCode == 200) {
-      // Handle successful submission
-      print(response);
-    } else {
-      // Handle error
-      print('Failed to submit form');
+    final token = Session.token;
+    final url = Uri.parse('http://127.0.0.1:8001/addTransaction');
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: json.encode({
+          'content': textController1.text,
+          'currency': dropdownValue0!['code'],
+          'amount': textController2.text,
+          'type': dropdownValue1,
+          'date': dateController.text,
+          'category': dropdownValue2,
+          'tags': dropdownValue3,
+          'notes': finalTextController.text,
+          'user_id': userId,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Transaction added.')),
+        );
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const Home()));
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to submit form (${response.statusCode})')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to submit form: $e')),
+      );
     }
   }
 
@@ -558,12 +605,9 @@ class _SecondRouteState extends State<SecondRoute> {
                     child: Text('Cancel'),
                   ),
                   ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const Home()));
+                    onPressed: () async {
                       if (_formKey.currentState!.validate()) {
-                        // Handle form submission here
-                        _submitForm();
-                        print('Form submitted');
+                        await _submitForm();
                       }
                     },
                     style: ButtonStyle(

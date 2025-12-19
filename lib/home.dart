@@ -6,6 +6,7 @@ import 'analysis.dart';
 import 'history.dart';
 import 'settings.dart';
 import 'form.dart';
+import 'session.dart';
 class Home extends StatelessWidget {
   const Home({super.key});
 
@@ -179,7 +180,14 @@ class _HomePageState extends State<HomePage> {
   // Fetch today's transactions from the backend
   Future<void> fetchTodayTransactions() async {
     try {
-      final response = await http.get(Uri.parse('http://127.0.0.1:8000/transactions'));
+      final userId = Session.userId;
+      if (userId == null) {
+        if (mounted) {
+          setState(() { _isLoadingTransactions = false; });
+        }
+        return;
+      }
+      final response = await http.get(Uri.parse('http://127.0.0.1:8001/transactions?user_id=$userId'));
       if (response.statusCode == 200) {
         final List<dynamic> transactions = json.decode(response.body);
 

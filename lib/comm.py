@@ -6,7 +6,11 @@ from datetime import date
 import pyodbc
 from lib.graphmaker import create_dash_app
 from starlette.middleware.wsgi import WSGIMiddleware
+from lib.auth_service import router as auth_router
 app = FastAPI()
+
+# Mount auth router
+app.include_router(auth_router)
 
 # Create and mount Dash app
 dash_app = create_dash_app(prefix="/dashboard")  # Mount Dash app at /dashboard
@@ -45,6 +49,7 @@ class Transaction(BaseModel):
     category: str
     tags: str
     notes: Optional[str] = None
+    user_id: int
 
 @app.post("/addTransaction")
 async def add_transaction(transaction: Transaction):
@@ -55,15 +60,17 @@ async def add_transaction(transaction: Transaction):
         tx_date = transaction.date
         if not tx_date:
             tx_date = date.today().isoformat()
-
+        if tx_date == 'null':
+            tx_date = date.today().isoformat()
         tx_notes = transaction.notes
         if tx_notes is None:
             tx_notes = 'None'
 
+        print(transaction)
         cursor.execute('''
-            INSERT INTO transactions (content, currency, amount, type, date, category, tags, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', transaction.content, transaction.currency, transaction.amount, transaction.type, tx_date, transaction.category, transaction.tags, tx_notes)
+            INSERT INTO transactions (content, currency, amount, type, date, category, tags, notes, userid)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', transaction.content, transaction.currency, transaction.amount, transaction.type, tx_date, transaction.category, transaction.tags, tx_notes, transaction.user_id)
         conn.commit()
         return {"message": "Transaction added successfully"}
     
@@ -71,11 +78,13 @@ async def add_transaction(transaction: Transaction):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/transactions")
-async def get_transactions():
+async def get_transactions(user_id: int):
     try:
         conn = get_conn()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM dbo.transactions')
+        print(user_id)
+        # Ensure the parameter is bound correctly
+        cursor.execute('SELECT * FROM dbo.transactions WHERE userid = ?', (user_id,))
         rows = cursor.fetchall()
         transactions = []
         for row in rows:
@@ -88,7 +97,8 @@ async def get_transactions():
                 "date": row[5],
                 "category": row[6],
                 "tags": row[7],
-                "notes": row[8]
+                "notes": row[8],
+                "user_id": row[9] if len(row) > 9 else None
             })
         return transactions
     except Exception as e:
@@ -117,13 +127,6 @@ async def get_plotly_json():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
-
-@app.post("/parse")
-async def parse_expense(request: Request):
-    data = await request.json()
-    text = data.get("text", "")
-    
-    return {"expenses": expenses}
 
 @app.get("/")
 async def read_root():
