@@ -54,9 +54,56 @@ class _HistoryPageState extends State<HistoryPage> {
     fetchTransactions(); // Fetch transactions when the page loads
   }
 
-  void _editSelectedTransactions() {
-    // Placeholder for edit functionality
-    print('Edit transactions: $_selectedTransactions');
+  void _showEditDialog(int index, Map<String, dynamic> transaction) {
+    showDialog(
+      context: context,
+      builder: (ctx) => EditTransactionDialog(
+        transaction: transaction,
+        onSave: (updatedTransaction) async {
+          await _updateTransaction(index, updatedTransaction);
+          Navigator.pop(ctx);
+        },
+      ),
+    );
+  }
+
+  Future<void> _updateTransaction(int index, Map<String, dynamic> updatedTransaction) async {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
+
+    try {
+      final token = Session.token;
+      final response = await http.put(
+        Uri.parse('http://127.0.0.1:8001/updateTransaction/${_transactions[index]['id']}'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: json.encode(updatedTransaction),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        if (mounted) {
+          setState(() {
+            _transactions[index] = updatedTransaction;
+            _isLoading = false;
+          });
+        }
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction updated.')));
+      } else {
+        throw Exception('Failed to update: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error updating transaction: $e')));
+    }
   }
 
   Future<void> _deleteSelectedTransactions() async {
@@ -231,6 +278,17 @@ class _HistoryPageState extends State<HistoryPage> {
                                 ),
                                 overflow: TextOverflow.ellipsis, // Truncate if too long
                               ),
+                              const SizedBox(width: 16), // Space between category and edit button
+                              // Edit button
+                              IconButton(
+                                icon: const Icon(Icons.edit),
+                                onPressed: () => _showEditDialog(index, transaction),
+                                iconSize: 20,
+                                constraints: const BoxConstraints(
+                                  minWidth: 32,
+                                  minHeight: 32,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -238,6 +296,224 @@ class _HistoryPageState extends State<HistoryPage> {
                     );
                   },
                 ),
+    );
+  }
+}
+
+class EditTransactionDialog extends StatefulWidget {
+  final Map<String, dynamic> transaction;
+  final Function(Map<String, dynamic>) onSave;
+
+  const EditTransactionDialog({
+    required this.transaction,
+    required this.onSave,
+    super.key,
+  });
+
+  @override
+  _EditTransactionDialogState createState() => _EditTransactionDialogState();
+}
+
+class _EditTransactionDialogState extends State<EditTransactionDialog> {
+  late TextEditingController contentController;
+  late TextEditingController amountController;
+  late TextEditingController tagsController;
+  late TextEditingController notesController;
+  late TextEditingController dateController;
+
+  String? selectedType;
+  String? selectedCategory;
+  String? selectedCurrency;
+
+  final List<String> _types = ['expense', 'income'];
+    final List<String> _categories = ['Food', 'Transport', 'Entertainment', 'Utilities', 'Other'];
+    final List<Map<String, String>> _currencies = [
+    {'flag': '🇺🇸', 'code': 'USD'},
+    {'flag': '🇪🇺', 'code': 'EUR'},
+    {'flag': '🇻🇳', 'code': 'VND'},
+    {'flag': '🇸🇬', 'code': 'SGD'},
+    {'flag': '🇬🇧', 'code': 'GBP'},
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    contentController = TextEditingController(text: widget.transaction['content'] ?? '');
+    amountController = TextEditingController(text: widget.transaction['amount']?.toString() ?? '');
+    tagsController = TextEditingController(text: widget.transaction['tags'] ?? '');
+    notesController = TextEditingController(text: widget.transaction['notes'] ?? '');
+    dateController = TextEditingController(text: widget.transaction['date'] ?? '');
+    selectedType = widget.transaction['type'] ?? 'expense';
+    if (!_types.contains(selectedType)) {
+      selectedType = _types.first;
+    }
+
+    selectedCategory = widget.transaction['category'] ?? 'Other';
+    if (!_categories.contains(selectedCategory)) {
+      selectedCategory = _categories.first;
+    }
+
+    selectedCurrency = widget.transaction['currency'] ?? 'USD';
+    final currencyCodes = _currencies.map((c) => c['code']).whereType<String>().toSet();
+    if (!currencyCodes.contains(selectedCurrency)) {
+      selectedCurrency = _currencies.first['code'];
+    }
+  }
+
+  @override
+  void dispose() {
+    contentController.dispose();
+    amountController.dispose();
+    tagsController.dispose();
+    notesController.dispose();
+    dateController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final baseDate = DateTime.tryParse(dateController.text) ?? DateTime.now();
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: baseDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null) {
+      setState(() {
+        dateController.text = "${picked.toLocal()}".split(' ')[0];
+      });
+    }
+  }
+
+  void _saveTransaction() {
+    final updatedTransaction = {
+      ...widget.transaction,
+      'content': contentController.text,
+      'amount': double.parse(amountController.text),
+      'type': selectedType,
+      'category': selectedCategory,
+      'currency': selectedCurrency,
+      'tags': tagsController.text,
+      'notes': notesController.text,
+      'date': dateController.text,
+    };
+    widget.onSave(updatedTransaction);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit Transaction'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: contentController,
+              decoration: const InputDecoration(
+                labelText: 'Content',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: selectedCurrency,
+                    decoration: const InputDecoration(
+                      labelText: 'Currency',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _currencies
+                        .map((c) => DropdownMenuItem(
+                              value: c['code'],
+                              child: Text('${c['flag']} ${c['code']}'),
+                            ))
+                        .toList(),
+                    onChanged: (value) => setState(() => selectedCurrency = value),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    controller: amountController,
+                    decoration: const InputDecoration(
+                      labelText: 'Amount',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: selectedType,
+              decoration: const InputDecoration(
+                labelText: 'Type',
+                border: OutlineInputBorder(),
+              ),
+              items: _types
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                  .toList(),
+              onChanged: (value) => setState(() => selectedType = value),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: dateController,
+              decoration: InputDecoration(
+                labelText: 'Date',
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.calendar_today),
+                  onPressed: () => _selectDate(context),
+                ),
+              ),
+              readOnly: true,
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: selectedCategory,
+              decoration: const InputDecoration(
+                labelText: 'Category',
+                border: OutlineInputBorder(),
+              ),
+              items: _categories
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                  .toList(),
+              onChanged: (value) => setState(() => selectedCategory = value),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: tagsController,
+              decoration: const InputDecoration(
+                labelText: 'Tags',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: notesController,
+              decoration: const InputDecoration(
+                labelText: 'Notes',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _saveTransaction,
+          child: const Text('Save'),
+        ),
+      ],
     );
   }
 }

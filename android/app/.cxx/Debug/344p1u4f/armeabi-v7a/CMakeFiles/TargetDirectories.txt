@@ -1,0 +1,2 @@
+C:/Users/Trung Anh/Desktop/code/projectfina/android/app/.cxx/Debug/344p1u4f/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Users/Trung Anh/Desktop/code/projectfina/android/app/.cxx/Debug/344p1u4f/armeabi-v7a/CMakeFiles/rebuild_cache.dir
