@@ -45,7 +45,7 @@ class _MainAppState extends State<MainApp> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('TA Expense'),
+        title: Image.asset('assets/icon/3.png', height: 40),
         backgroundColor: Colors.blue,
       ),
       body: Center(
@@ -109,12 +109,6 @@ class _MainAppState extends State<MainApp> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: <Widget>[
-            const DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.blue,
-              ),
-              child: Text('Drawer Header'),
-            ),
             ListTile(
               title: const Text('Item 1'),
               onTap: () {
