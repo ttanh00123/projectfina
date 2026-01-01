@@ -1,0 +1,14 @@
+{
+  "@@locale": "en",
+  "appTitle": "TA Expense",
+  "home": "Home",
+  "analysis": "Analysis",
+  "history": "History",
+  "settings": "Settings",
+  "logout": "Logout",
+  "todayTransactions": "Today's Transactions",
+  "noTransactions": "No transactions found for today",
+  "amount": "Amount",
+  "category": "Category",
+  "quickAdd": "Quick Add Transaction"
+}

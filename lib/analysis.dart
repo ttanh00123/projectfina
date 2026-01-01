@@ -36,7 +36,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
       }
 
       final transactionsResponse = await http.get(
-        Uri.parse('http://127.0.0.1:8001/transactions?user_id=$userId'),
+        Uri.parse('http://160.191.101.179:8000/transactions?user_id=$userId'),
       );
 
       if (transactionsResponse.statusCode != 200) {

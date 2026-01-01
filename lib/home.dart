@@ -81,45 +81,25 @@ class _MainAppState extends State<MainApp> {
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
         notchMargin: 6.0,
-        child: BottomNavigationBar(
-          items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.analytics),
-              label: 'Analysis',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.history),
-              label: 'History',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.settings),
-              label: 'Settings',
-            ),
-          ],
-          currentIndex: _selectedIndex,
-          selectedItemColor: Colors.amber[800],
-          onTap: _onItemTapped,
-        ),
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: <Widget>[
-            ListTile(
-              title: const Text('Item 1'),
-              onTap: () {
-                Navigator.pop(context);
-              },
+            IconButton(
+              icon: Icon(Icons.home, color: _selectedIndex == 0 ? Colors.amber[800] : Colors.grey),
+              onPressed: () => _onItemTapped(0),
             ),
-            ListTile(
-              title: const Text('Item 2'),
-              onTap: () {
-                Navigator.pop(context);
-              },
+            IconButton(
+              icon: Icon(Icons.analytics, color: _selectedIndex == 1 ? Colors.amber[800] : Colors.grey),
+              onPressed: () => _onItemTapped(1),
+            ),
+            const SizedBox(width: 48), // Space for FAB
+            IconButton(
+              icon: Icon(Icons.history, color: _selectedIndex == 2 ? Colors.amber[800] : Colors.grey),
+              onPressed: () => _onItemTapped(2),
+            ),
+            IconButton(
+              icon: Icon(Icons.settings, color: _selectedIndex == 3 ? Colors.amber[800] : Colors.grey),
+              onPressed: () => _onItemTapped(3),
             ),
           ],
         ),
@@ -145,7 +125,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> fetchPieChart() async {
     try {
       final response = await http.post(
-        Uri.parse('http://127.0.0.1:8000/pie_chart'),
+        Uri.parse('http://160.191.101.179:8000/pie_chart'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'transactions': [], // You can pass all transactions or filter them
@@ -181,7 +161,7 @@ class _HomePageState extends State<HomePage> {
         }
         return;
       }
-      final response = await http.get(Uri.parse('http://127.0.0.1:8001/transactions?user_id=$userId'));
+      final response = await http.get(Uri.parse('http://160.191.101.179:8000/transactions?user_id=$userId'));
       if (response.statusCode == 200) {
         final List<dynamic> transactions = json.decode(response.body);
 

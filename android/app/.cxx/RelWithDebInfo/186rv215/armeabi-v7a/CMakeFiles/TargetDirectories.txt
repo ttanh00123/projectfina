@@ -1,0 +1,2 @@
+C:/Users/Trung Anh/Desktop/code/projectfina/android/app/.cxx/RelWithDebInfo/186rv215/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Users/Trung Anh/Desktop/code/projectfina/android/app/.cxx/RelWithDebInfo/186rv215/armeabi-v7a/CMakeFiles/rebuild_cache.dir

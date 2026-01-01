@@ -1,0 +1,14 @@
+{
+  "@@locale": "vi",
+  "appTitle": "TA Chi Tiêu",
+  "home": "Trang Chủ",
+  "analysis": "Phân Tích",
+  "history": "Lịch Sử",
+  "settings": "Cài Đặt",
+  "logout": "Đăng Xuất",
+  "todayTransactions": "Giao Dịch Hôm Nay",
+  "noTransactions": "Không có giao dịch nào hôm nay",
+  "amount": "Số Tiền",
+  "category": "Danh Mục",
+  "quickAdd": "Thêm Giao Dịch Nhanh"
+}

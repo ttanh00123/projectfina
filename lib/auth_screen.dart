@@ -21,7 +21,7 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _submitting = false;
   String? _error;
 
-  static const String _apiBase = 'http://127.0.0.1:8001'; // backend base
+  static const String _apiBase = 'http://160.191.101.179:8000'; // backend base
 
   Map<String, dynamic>? _decodeJwtPayload(String token) {
     try {

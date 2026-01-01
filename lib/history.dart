@@ -28,7 +28,7 @@ class _HistoryPageState extends State<HistoryPage> {
       }
 
       final response = await http.get(
-        Uri.parse('http://127.0.0.1:8001/transactions?user_id=$userId'),
+        Uri.parse('http://160.191.101.179:8000/transactions?user_id=$userId'),
       );
       if (response.statusCode == 200) {
         setState(() {
@@ -77,7 +77,7 @@ class _HistoryPageState extends State<HistoryPage> {
     try {
       final token = Session.token;
       final response = await http.put(
-        Uri.parse('http://127.0.0.1:8001/updateTransaction/${_transactions[index]['id']}'),
+        Uri.parse('http://160.191.101.179:8000/updateTransaction/${_transactions[index]['id']}'),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
@@ -157,7 +157,7 @@ class _HistoryPageState extends State<HistoryPage> {
       }
 
       // Send DELETE requests in parallel
-      final responses = await Future.wait(ids.map((id) => http.delete(Uri.parse('http://127.0.0.1:8001/deleteTransaction/$id'))));
+      final responses = await Future.wait(ids.map((id) => http.delete(Uri.parse('http://160.191.101.179:8000/deleteTransaction/$id'))));
 
       // Check results
       bool anyFailure = false;
@@ -223,14 +223,14 @@ class _HistoryPageState extends State<HistoryPage> {
                     final amountColor = isExpense ? Colors.red : Colors.green;
 
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
                       child: Card(
                         elevation: 2,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
                           child: Row(
                             children: [
                               // Checkbox for selecting transactions
@@ -246,48 +246,49 @@ class _HistoryPageState extends State<HistoryPage> {
                                   });
                                 },
                               ),
-                              const SizedBox(width: 8), // Space between checkbox and content
+                              const SizedBox(width: 4), // Space between checkbox and content
                               // Amount with prefix
                               Text(
                                 '$amountPrefix${transaction['amount']} ${transaction['currency']}',
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.bold,
                                   color: amountColor,
                                 ),
                               ),
-                              const SizedBox(width: 16), // Space between amount and content
+                              const SizedBox(width: 8), // Space between amount and content
                               // Content
                               Expanded(
                                 child: Text(
                                   transaction['content'],
                                   style: const TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w500,
                                   ),
                                   overflow: TextOverflow.ellipsis, // Truncate if too long
                                 ),
                               ),
-                              const SizedBox(width: 16), // Space between content and category
+                              const SizedBox(width: 6), // Space between content and category
                               // Category
                               Text(
                                 transaction['category'],
                                 style: const TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 12,
                                   color: Colors.grey,
                                 ),
                                 overflow: TextOverflow.ellipsis, // Truncate if too long
                               ),
-                              const SizedBox(width: 16), // Space between category and edit button
+                              const SizedBox(width: 4), // Space between category and edit button
                               // Edit button
                               IconButton(
                                 icon: const Icon(Icons.edit),
                                 onPressed: () => _showEditDialog(index, transaction),
-                                iconSize: 20,
+                                iconSize: 18,
                                 constraints: const BoxConstraints(
-                                  minWidth: 32,
-                                  minHeight: 32,
+                                  minWidth: 28,
+                                  minHeight: 28,
                                 ),
+                                padding: EdgeInsets.zero,
                               ),
                             ],
                           ),

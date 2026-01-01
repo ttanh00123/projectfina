@@ -23,7 +23,7 @@ rule CUSTOM_COMMAND
 # Rule for re-running cmake.
 
 rule RERUN_CMAKE
-  command = C:\dev\cmake\3.22.1\bin\cmake.exe --regenerate-during-build -S"C:\Users\Trung Anh\Downloads\flutter_windows_3.29.2-stable\flutter\packages\flutter_tools\gradle\src\main\groovy" -B"C:\Users\Trung Anh\Desktop\code\projectfina\android\app\.cxx\Debug\344p1u4f\arm64-v8a"
+  command = C:\dev\android_sdk\cmake\3.22.1\bin\cmake.exe --regenerate-during-build -S"C:\Users\Trung Anh\Downloads\flutter_windows_3.29.2-stable\flutter\packages\flutter_tools\gradle\src\main\groovy" -B"C:\Users\Trung Anh\Desktop\code\projectfina\android\app\.cxx\Debug\344p1u4f\arm64-v8a"
   description = Re-running CMake...
   generator = 1
 
@@ -32,7 +32,7 @@ rule RERUN_CMAKE
 # Rule for cleaning all built files.
 
 rule CLEAN
-  command = C:\dev\cmake\3.22.1\bin\ninja.exe $FILE_ARG -t clean $TARGETS
+  command = C:\dev\android_sdk\cmake\3.22.1\bin\ninja.exe $FILE_ARG -t clean $TARGETS
   description = Cleaning all built files...
 
 
@@ -40,6 +40,6 @@ rule CLEAN
 # Rule for printing all primary targets available.
 
 rule HELP
-  command = C:\dev\cmake\3.22.1\bin\ninja.exe -t targets
+  command = C:\dev\android_sdk\cmake\3.22.1\bin\ninja.exe -t targets
   description = All primary targets available:
 
