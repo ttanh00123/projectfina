@@ -51,30 +51,19 @@ class _MainAppState extends State<MainApp> {
       body: Center(
         child: _pages.elementAt(_selectedIndex),
       ),
-      floatingActionButton: GestureDetector(
-        onLongPress: () {
-          // Long-press -> open quick add page that hosts AddTransaction
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => Scaffold(
-                appBar: AppBar(title: const Text('Quick Add Transaction')),
-                body: const Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: AddTransaction(),
-                ),
-              ),
-            ),
+            MaterialPageRoute(builder: (context) => const AddTransaction()),
           );
         },
-        child: FloatingActionButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const SecondRoute()),
-            );
-          },
-          child: const Icon(Icons.add),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add, size: 20),
+            Text('Add', style: TextStyle(fontSize: 10)),
+          ],
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -84,22 +73,46 @@ class _MainAppState extends State<MainApp> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: <Widget>[
-            IconButton(
-              icon: Icon(Icons.home, color: _selectedIndex == 0 ? Colors.amber[800] : Colors.grey),
-              onPressed: () => _onItemTapped(0),
+            InkWell(
+              onTap: () => _onItemTapped(0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.home, color: _selectedIndex == 0 ? Colors.amber[800] : Colors.grey),
+                  Text('Home', style: TextStyle(fontSize: 12, color: _selectedIndex == 0 ? Colors.amber[800] : Colors.grey)),
+                ],
+              ),
             ),
-            IconButton(
-              icon: Icon(Icons.analytics, color: _selectedIndex == 1 ? Colors.amber[800] : Colors.grey),
-              onPressed: () => _onItemTapped(1),
+            InkWell(
+              onTap: () => _onItemTapped(1),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.analytics, color: _selectedIndex == 1 ? Colors.amber[800] : Colors.grey),
+                  Text('Analysis', style: TextStyle(fontSize: 12, color: _selectedIndex == 1 ? Colors.amber[800] : Colors.grey)),
+                ],
+              ),
             ),
             const SizedBox(width: 48), // Space for FAB
-            IconButton(
-              icon: Icon(Icons.history, color: _selectedIndex == 2 ? Colors.amber[800] : Colors.grey),
-              onPressed: () => _onItemTapped(2),
+            InkWell(
+              onTap: () => _onItemTapped(2),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.history, color: _selectedIndex == 2 ? Colors.amber[800] : Colors.grey),
+                  Text('History', style: TextStyle(fontSize: 12, color: _selectedIndex == 2 ? Colors.amber[800] : Colors.grey)),
+                ],
+              ),
             ),
-            IconButton(
-              icon: Icon(Icons.settings, color: _selectedIndex == 3 ? Colors.amber[800] : Colors.grey),
-              onPressed: () => _onItemTapped(3),
+            InkWell(
+              onTap: () => _onItemTapped(3),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.settings, color: _selectedIndex == 3 ? Colors.amber[800] : Colors.grey),
+                  Text('Settings', style: TextStyle(fontSize: 12, color: _selectedIndex == 3 ? Colors.amber[800] : Colors.grey)),
+                ],
+              ),
             ),
           ],
         ),

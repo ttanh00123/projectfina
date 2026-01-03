@@ -17,8 +17,8 @@ class _AddTransactionState extends State<AddTransaction> {
 
   // --- Speech service fields ---
   final SpeechService _speechService = SpeechService();
-  bool _speechAvailable = false;   // true after successful init
-  bool _isListening = false;       // local listening state
+  bool _speechAvailable = false; // true after successful init
+  bool _isListening = false; // local listening state
   // --------------------------------
 
   Map<String, dynamic>? generatedTransaction;
@@ -40,7 +40,8 @@ class _AddTransactionState extends State<AddTransaction> {
     try {
       final url = Uri.parse('http://160.191.101.179:8000/generate');
       final resp = await http.post(url,
-          headers: {'Content-Type': 'application/json'}, body: json.encode({'prompt': prompt}));
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({'prompt': prompt}));
       if (resp.statusCode == 200) {
         final respText = resp.body;
         dynamic body;
@@ -52,7 +53,8 @@ class _AddTransactionState extends State<AddTransaction> {
           final objMatch = RegExp(r"\{[\s\S]*\}").firstMatch(respText);
           final arrMatch = RegExp(r"\[[\s\S]*\]").firstMatch(respText);
           String? jsonPart;
-          if (objMatch != null) jsonPart = objMatch.group(0);
+          if (objMatch != null)
+            jsonPart = objMatch.group(0);
           else if (arrMatch != null) jsonPart = arrMatch.group(0);
 
           if (jsonPart != null) {
@@ -87,7 +89,8 @@ class _AddTransactionState extends State<AddTransaction> {
           }
         }
 
-        if (tx == null) throw Exception('Unexpected response format: $respText');
+        if (tx == null)
+          throw Exception('Unexpected response format: $respText');
 
         if (mounted) {
           setState(() {
@@ -148,7 +151,8 @@ class _AddTransactionState extends State<AddTransaction> {
             _isPosting = false;
           });
         }
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction added.')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Transaction added.')));
         Navigator.pop(context);
       } else {
         throw Exception('Failed to add: ${resp.statusCode}');
@@ -187,7 +191,8 @@ class _AddTransactionState extends State<AddTransaction> {
   Future<void> _toggleListening() async {
     if (!_speechAvailable) {
       // optionally show message to user
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Speech not available')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Speech not available')));
       return;
     }
 
@@ -203,7 +208,8 @@ class _AddTransactionState extends State<AddTransaction> {
         setState(() {
           // Update the prompt text but keep the caret at end
           promptController.text = recognizedText;
-          promptController.selection = TextSelection.fromPosition(TextPosition(offset: recognizedText.length));
+          promptController.selection = TextSelection.fromPosition(
+              TextPosition(offset: recognizedText.length));
         });
 
         // Optionally auto-generate when final result arrives:
@@ -230,99 +236,194 @@ class _AddTransactionState extends State<AddTransaction> {
     super.dispose();
   }
 
+  List<Widget> _buildTransactionDetails(Map<String, dynamic> transaction) {
+    final widgets = <Widget>[];
+    
+    transaction.forEach((key, value) {
+      if (value != null && value.toString().isNotEmpty) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: '${key}: ',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  TextSpan(
+                    text: value.toString(),
+                    style: const TextStyle(
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+    });
+    
+    return widgets.isEmpty
+        ? [const Text('No transaction data generated')]
+        : widgets;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('AI Generate Transaction')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: promptController,
-              decoration: InputDecoration(
-                labelText: 'Describe the transaction',
-                border: OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(_isListening ? Icons.mic : Icons.mic_none, color: _isListening ? Colors.red : null),
-                  onPressed: _toggleListening,
-                  tooltip: _isListening ? 'Stop listening' : 'Start voice input',
-                ),
-              ),
-              minLines: 1,
-              maxLines: 4,
+      body: Column(
+        children: [
+          // Button to switch to manual form
+          Container(
+            width: double.infinity,
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SecondRoute()),
+                );
+              },
+              icon: const Icon(Icons.edit),
+              label: const Text('Switch to Manual Form'),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                ElevatedButton(
-                  onPressed: _isGenerating ? null : _generateTransaction,
-                  child: _isGenerating ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Generate'),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (_error != null) ...[
-              Text('Error: $_error', style: const TextStyle(color: Colors.red)),
-              const SizedBox(height: 12),
-            ],
-            if (generatedTransaction != null) ...[
-              Card(
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: promptController,
+                      decoration: InputDecoration(
+                        labelText: 'Describe the transaction',
+                        border: OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(_isListening ? Icons.mic : Icons.mic_none,
+                              color: _isListening ? Colors.red : null),
+                          onPressed: _toggleListening,
+                          tooltip: _isListening
+                              ? 'Stop listening'
+                              : 'Start voice input',
+                        ),
+                      ),
+                      minLines: 1,
+                      maxLines: 4,
+                    ),
+                  const SizedBox(height: 12),
+                  Row(
                     children: [
-                      Text(generatedTransaction!['content'] ?? 'No content', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 6),
-                      Text('Amount: ${generatedTransaction!['amount'] ?? ''} ${generatedTransaction!['currency'] ?? ''}'),
-                      const SizedBox(height: 6),
-                      Text('Category: ${generatedTransaction!['category'] ?? ''}'),
-                      const SizedBox(height: 6),
-                      Text('Date: ${generatedTransaction!['date'] ?? ''}'),
+                      ElevatedButton(
+                        onPressed: _isGenerating ? null : _generateTransaction,
+                        child: _isGenerating
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2))
+                            : const Text('Generate'),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
                     ],
                   ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(
-                    onPressed: _isPosting ? null : _confirmAddTransaction,
-                    child: _isPosting ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Yes'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _isPosting
-                        ? null
-                        : () {
-                            setState(() {
-                              generatedTransaction = null;
-                            });
-                          },
-                    child: const Text('No'),
-                  ),
+                  const SizedBox(height: 16),
+                  if (_error != null) ...[
+                    Text('Error: $_error',
+                        style: const TextStyle(color: Colors.red)),
+                    const SizedBox(height: 12),
+                  ],
+                  if (generatedTransaction != null) ...[
+                    Card(
+                      elevation: 2,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                  'Generated Transaction',
+                                  style: const TextStyle(
+                                      fontSize: 16, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 12),
+                              ..._buildTransactionDetails(generatedTransaction!),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _isPosting ? null : _confirmAddTransaction,
+                            style: ButtonStyle(
+                              backgroundColor:
+                                  MaterialStateProperty.all<Color>(
+                                      Colors.green),
+                            ),
+                            child: _isPosting
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Colors.white)),
+                                  )
+                                : const Text('Confirm'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => SecondRoute(
+                                    initialTransaction: generatedTransaction,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: const Text('Continue to Edit'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 16),
+                  ],
                 ],
               ),
-            ] else ...[
-              const Expanded(child: SizedBox()),
-            ],
-          ],
-        ),
+            ),
+          ),
+          ),
+        ],
       ),
     );
   }
 }
 
 class SecondRoute extends StatefulWidget {
-  const SecondRoute({super.key});
+  final Map<String, dynamic>? initialTransaction;
+
+  const SecondRoute({super.key, this.initialTransaction});
 
   @override
   _SecondRouteState createState() => _SecondRouteState();
@@ -330,6 +431,8 @@ class SecondRoute extends StatefulWidget {
 
 class _SecondRouteState extends State<SecondRoute> {
   final _formKey = GlobalKey<FormState>();
+  bool _isSubmitting = false;
+
   // Text editing controllers
   final TextEditingController textController1 = TextEditingController();
   final TextEditingController textController2 = TextEditingController();
@@ -352,6 +455,55 @@ class _SecondRouteState extends State<SecondRoute> {
     {'flag': '🇬🇧', 'code': 'GBP'},
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialTransaction != null) {
+      textController1.text = widget.initialTransaction!['content'] ?? '';
+      textController2.text = widget.initialTransaction!['amount']?.toString() ?? '';
+      
+      // Use current date if no date provided
+      String dateValue = widget.initialTransaction!['date'] ?? '';
+      if (dateValue.isEmpty) {
+        dateValue = DateTime.now().toString().split(' ')[0];
+      }
+      dateController.text = dateValue;
+      
+      finalTextController.text = widget.initialTransaction!['notes'] ?? '';
+
+      final currencyCode = widget.initialTransaction!['currency'];
+      if (currencyCode != null) {
+        try {
+          dropdownValue0 = _currencies.firstWhere(
+            (c) => c['code'] == currencyCode,
+          );
+        } catch (e) {
+          dropdownValue0 = null; // Invalid currency code
+        }
+      }
+
+      final type = widget.initialTransaction!['type'];
+      if (type != null && ['income', 'expense'].contains(type)) {
+        dropdownValue1 = type;
+      }
+
+      final category = widget.initialTransaction!['category'];
+      final validCategories = ['Food & Drinks', 'Education', 'Transportation', 'Health', 'Entertainment', 'Utilities', 'Devices', 'Others'];
+      if (category != null && validCategories.contains(category)) {
+        dropdownValue2 = category;
+      }
+
+      final tags = widget.initialTransaction!['tags'];
+      final validTags = ['Personal', 'Family', 'Work'];
+      if (tags != null && validTags.contains(tags)) {
+        dropdownValue3 = tags;
+      }
+    } else {
+      // Set default date if no initial transaction
+      dateController.text = DateTime.now().toString().split(' ')[0];
+    }
+  }
+
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -367,11 +519,24 @@ class _SecondRouteState extends State<SecondRoute> {
   }
 
   Future<void> _submitForm() async {
+    // Prevent duplicate submissions
+    if (_isSubmitting) return;
+    
+    setState(() {
+      _isSubmitting = true;
+    });
+
     final userId = Session.userId;
     if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log in before adding transactions.')),
-      );
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Please log in before adding transactions.')),
+        );
+      }
       return;
     }
 
@@ -402,19 +567,78 @@ class _SecondRouteState extends State<SecondRoute> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Transaction added.')),
         );
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const Home()));
+        Navigator.pushReplacement(
+            context, MaterialPageRoute(builder: (context) => const Home()));
       } else {
         if (!mounted) return;
+        setState(() {
+          _isSubmitting = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to submit form (${response.statusCode})')),
+          SnackBar(
+              content: Text('Failed to submit form (${response.statusCode})')),
         );
       }
     } catch (e) {
       if (!mounted) return;
+      setState(() {
+        _isSubmitting = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to submit form: $e')),
       );
     }
+  }
+
+  List<Widget> _buildGeneratedDataDisplay() {
+    if (widget.initialTransaction == null) {
+      return [];
+    }
+
+    final widgets = <Widget>[
+      const Divider(thickness: 2),
+      const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8.0),
+        child: Text(
+          'Generated Transaction Data:',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        ),
+      ),
+    ];
+
+    widget.initialTransaction!.forEach((key, value) {
+      if (value != null && value.toString().isNotEmpty) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: '$key: ',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                      fontSize: 12,
+                    ),
+                  ),
+                  TextSpan(
+                    text: value.toString(),
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+    });
+
+    widgets.add(const Divider(thickness: 2));
+    return widgets;
   }
 
   @override
@@ -423,210 +647,282 @@ class _SecondRouteState extends State<SecondRoute> {
       appBar: AppBar(
         title: const Text('Add Transaction'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                controller: textController1,
-                decoration: InputDecoration(
-                  labelText: 'Content',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter some text';
-                  }
-                  return null;
+      body: Column(
+        children: [
+          // Button to switch to AI form - only show if not editing AI-generated transaction
+          if (widget.initialTransaction == null)
+            Container(
+              width: double.infinity,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const AddTransaction()),
+                  );
                 },
+                icon: const Icon(Icons.auto_awesome),
+                label: const Text('Switch to AI Form'),
               ),
-              SizedBox(height: 10),
-              Row(
-                children: [
-                  // Currency Dropdown
-                  Expanded(
-                    flex: 1, // Adjusts the width ratio for dropdown
-                    child: DropdownButtonFormField<Map<String, String>>(
-                      decoration: InputDecoration(
-                        labelText: 'Currency',
-                        border: OutlineInputBorder(),
+            ),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Display generated transaction data if available
+                      ..._buildGeneratedDataDisplay(),
+                      TextFormField(
+                        controller: textController1,
+                        decoration: InputDecoration(
+                          labelText: 'Content',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter some text';
+                          }
+                          return null;
+                        },
                       ),
-                      items: _currencies
-                          .map((currency) => DropdownMenuItem(
-                                value: currency,
-                                child: Row(
-                                  children: [
-                                    Text(currency['flag']!),
-                                    SizedBox(width: 8),
-                                    Text(currency['code']!),
-                                  ],
+                      SizedBox(height: 10),
+                      Row(
+                        children: [
+                          // Currency Dropdown
+                          Expanded(
+                            flex: 2, // Adjusts the width ratio for dropdown
+                            child: DropdownButtonFormField<Map<String, String>>(
+                              decoration: InputDecoration(
+                                labelText: 'Currency',
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 16),
+                              ),
+                              isExpanded: true,
+                              value: dropdownValue0,
+                              items: _currencies
+                                  .map((currency) => DropdownMenuItem(
+                                        value: currency,
+                                        child: Row(
+                                          children: [
+                                            Text(currency['flag']!),
+                                            SizedBox(width: 8),
+                                            Text(currency['code']!),
+                                          ],
+                                        ),
+                                      ))
+                                  .toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  dropdownValue0 = value;
+                                });
+                              },
+                              validator: (value) => value == null
+                                  ? 'Please select a currency'
+                                  : null,
+                              selectedItemBuilder: (context) => _currencies
+                                  .map((currency) => Row(
+                                        children: [
+                                          Text(currency['flag']!),
+                                          SizedBox(width: 8),
+                                          Text(currency['code']!),
+                                        ],
+                                      ))
+                                  .toList(),
+                            ),
+                          ),
+                          SizedBox(
+                              width:
+                                  10), // Margin between dropdown and text field
+                          // Amount Text Field
+                          Expanded(
+                            flex: 5, // Adjusts the width ratio for text field
+                            child: TextFormField(
+                              controller: textController2,
+                              decoration: InputDecoration(
+                                labelText: 'Amount',
+                                border: OutlineInputBorder(),
+                              ),
+                              keyboardType: TextInputType.number,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter an amount';
+                                }
+                                final n = num.tryParse(value);
+                                if (n == null) {
+                                  return 'Please enter a valid number';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 10),
+                      DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          labelText: 'Type',
+                          border: OutlineInputBorder(),
+                        ),
+                        value: dropdownValue1,
+                        items: ['income', 'expense']
+                            .map((option) => DropdownMenuItem(
+                                  value: option,
+                                  child: Text(option),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            dropdownValue1 =
+                                value; // Update dropdownValue1 when a new value is selected
+                          });
+                        },
+                        validator: (value) => value == null
+                            ? 'Please select the transaction type'
+                            : null,
+                      ),
+                      SizedBox(height: 10),
+                      TextFormField(
+                        controller: dateController,
+                        decoration: const InputDecoration(
+                          labelText: 'Select Date',
+                          border: OutlineInputBorder(),
+                        ),
+                        readOnly: true,
+                        onTap: () => _selectDate(context),
+                      ),
+                      SizedBox(height: 10),
+                      DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          labelText: 'Category',
+                          border: OutlineInputBorder(),
+                        ),
+                        value: dropdownValue2,
+                        items: ['Food & Drinks', 'Education', 'Transportation', 'Health', 'Entertainment', 'Utilities', 'Devices', 'Others']
+                            .map((option) => DropdownMenuItem(
+                                  value: option,
+                                  child: Text(option),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            dropdownValue2 =
+                                value; // Update dropdownValue1 when a new value is selected
+                          });
+                        },
+                        validator: (value) =>
+                            value == null ? 'Please select a category' : null,
+                      ),
+                      SizedBox(height: 10),
+                      DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          labelText: 'Tags',
+                          border: OutlineInputBorder(),
+                        ),
+                        value: dropdownValue3,
+                        items: ['Personal', 'Family', 'Work']
+                            .map((option) => DropdownMenuItem(
+                                  value: option,
+                                  child: Text(option),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            dropdownValue3 =
+                                value; // Update dropdownValue1 when a new value is selected
+                          });
+                        },
+                        validator: (value) =>
+                            value == null ? 'Please select a tag' : null,
+                      ),
+                      SizedBox(height: 10),
+                      TextFormField(
+                        controller: finalTextController,
+                        decoration: InputDecoration(
+                          labelText: 'Notes (optional)',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              // Redirect back to Home without stacking another route
+                              Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => const Home()));
+                            },
+                            style: ButtonStyle(
+                              shape: MaterialStateProperty.all<
+                                  RoundedRectangleBorder>(
+                                RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18.0),
+                                  side: BorderSide(
+                                      color: const Color.fromRGBO(
+                                          255, 203, 54, 244)),
                                 ),
-                              ))
-                          .toList(),
-                      onChanged: (value) {
-                        dropdownValue0 = value;
-                      },
-                      validator: (value) =>
-                          value == null ? 'Please select a currency' : null,
-                      selectedItemBuilder: (context) => _currencies
-                          .map((currency) => Row(
-                                children: [
-                                  Text(currency['flag']!),
-                                  SizedBox(width: 8),
-                                  Text(currency['code']!),
-                                ],
-                              ))
-                          .toList(),
-                    ),
-                  ),
-                  SizedBox(width: 10), // Margin between dropdown and text field
-                  // Amount Text Field
-                  Expanded(
-                    flex: 3, // Adjusts the width ratio for text field
-                    child: TextFormField(
-                      controller: textController2,
-                      decoration: InputDecoration(
-                        labelText: 'Amount',
-                        border: OutlineInputBorder(),
+                              ),
+                            ),
+                            child: Text('Cancel'),
+                          ),
+                          ElevatedButton(
+                            onPressed: _isSubmitting ? null : () async {
+                              if (_formKey.currentState!.validate()) {
+                                await _submitForm();
+                              }
+                            },
+                            style: ButtonStyle(
+                              foregroundColor: MaterialStateProperty.all<Color>(
+                                  Colors.white),
+                              backgroundColor:
+                                  MaterialStateProperty.resolveWith<Color?>(
+                                (Set<MaterialState> states) {
+                                  if (states.contains(MaterialState.disabled)) {
+                                    return Colors.grey;
+                                  }
+                                  return const Color.fromARGB(255, 203, 54, 244);
+                                },
+                              ),
+                              shape: MaterialStateProperty.all<
+                                  RoundedRectangleBorder>(
+                                RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18.0),
+                                  side: BorderSide(
+                                      color: const Color.fromARGB(
+                                          255, 203, 54, 244)),
+                                ),
+                              ),
+                            ),
+                            child: _isSubmitting
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Colors.white)),
+                                  )
+                                : const Text('Add'),
+                          ),
+                        ],
                       ),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter an amount';
-                        }
-                        final n = num.tryParse(value);
-                        if (n == null) {
-                          return 'Please enter a valid number';
-                        }
-                        return null;
-                      },
-                    ),
+                    ],
                   ),
-                ],
-              ),
-              SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                decoration: InputDecoration(
-                  labelText: 'Type',
-                  border: OutlineInputBorder(),
-                ),
-                items: ['income', 'expense']
-                    .map((option) => DropdownMenuItem(
-                          value: option,
-                          child: Text(option),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    dropdownValue1 = value; // Update dropdownValue1 when a new value is selected
-                  });
-                },
-                validator: (value) =>
-                    value == null ? 'Please select the transaction type' : null,
-              ),
-              SizedBox(height: 10),
-              TextFormField(
-                controller: dateController,
-                decoration: const InputDecoration(
-                  labelText: 'Select Date',
-                  border: OutlineInputBorder(),
-                ),
-                readOnly: true,
-                onTap: () => _selectDate(context),
-              ),
-              SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                decoration: InputDecoration(
-                  labelText: 'Category',
-                  border: OutlineInputBorder(),
-                ),
-                items: ['Food & Drinks', '2', '3']
-                    .map((option) => DropdownMenuItem(
-                          value: option,
-                          child: Text(option),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    dropdownValue2 = value; // Update dropdownValue1 when a new value is selected
-                  });
-                },
-                validator: (value) =>
-                    value == null ? 'Please select a category' : null,
-              ),
-              SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                decoration: InputDecoration(
-                  labelText: 'Tags',
-                  border: OutlineInputBorder(),
-                ),
-                items: ['Personal', '5', '6']
-                    .map((option) => DropdownMenuItem(
-                          value: option,
-                          child: Text(option),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    dropdownValue3 = value; // Update dropdownValue1 when a new value is selected
-                  });
-                },
-                validator: (value) =>
-                    value == null ? 'Please select a tag' : null,
-              ),
-              SizedBox(height: 10),
-              TextFormField(
-                controller: finalTextController,
-                decoration: InputDecoration(
-                  labelText: 'Notes (optional)',
-                  border: OutlineInputBorder(),
                 ),
               ),
-              Spacer(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      // Redirect back to Home without stacking another route
-                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const Home()));
-                    },
-                    style: ButtonStyle(
-                      shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                        RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18.0),
-                          side: BorderSide(color: const Color.fromRGBO(255, 203, 54, 244)),
-                        ),
-                      ),
-                    ),
-                    child: Text('Cancel'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (_formKey.currentState!.validate()) {
-                        await _submitForm();
-                      }
-                    },
-                    style: ButtonStyle(
-                      foregroundColor: MaterialStateProperty.all<Color>(Colors.white),
-                      backgroundColor: MaterialStateProperty.all<Color>(const Color.fromARGB(255, 203, 54, 244)),
-                      shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                        RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18.0),
-                          side: BorderSide(color: const Color.fromARGB(255, 203, 54, 244)),
-                        ),
-                      ),
-                    ),
-                    child: Text('Add'),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
