@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'home.dart';
 import 'session.dart';
 
@@ -19,6 +20,8 @@ class _AuthScreenState extends State<AuthScreen> {
 
   bool _isLogin = true;
   bool _submitting = false;
+  bool _rememberMe = true;
+  bool _checkingStored = true;
   String? _error;
 
   static const String _apiBase = 'http://160.191.101.179:8000'; // backend base
@@ -46,12 +49,59 @@ class _AuthScreenState extends State<AuthScreen> {
     Session.setSession(jwt: token, id: id, mail: email);
   }
 
+  Future<void> _persistToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    final expiry = DateTime.now().add(const Duration(days: 90));
+    await prefs.setString('jwt_token', token);
+    await prefs.setInt('jwt_expiry', expiry.millisecondsSinceEpoch);
+  }
+
+  Future<void> _clearPersistedToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('jwt_token');
+    await prefs.remove('jwt_expiry');
+  }
+
+  Future<void> _tryRestoreSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      final expiryMs = prefs.getInt('jwt_expiry');
+      final expiry = expiryMs == null ? null : DateTime.fromMillisecondsSinceEpoch(expiryMs);
+
+      final tokenValid = token != null && expiry != null && expiry.isAfter(DateTime.now());
+      if (tokenValid) {
+        _storeSessionFromToken(token!);
+        if (!mounted) return;
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const Home()));
+        return;
+      }
+
+      // Token missing or expired: clean up and show auth form
+      await _clearPersistedToken();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = 'Auto-login failed: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _checkingStored = false);
+      }
+    }
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     _nameController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _tryRestoreSession();
   }
 
   Future<void> _submit() async {
@@ -65,15 +115,20 @@ class _AuthScreenState extends State<AuthScreen> {
     final password = _passwordController.text;
     final name = _nameController.text.trim();
 
-    final path = _isLogin ? '/auth/login' : '/auth/signup';
+    final hasJwt = Session.token != null && Session.token!.isNotEmpty;
+    final path = _isLogin
+      ? (hasJwt ? '/auth/login/token' : '/auth/login')
+      : '/auth/signup';
     final body = _isLogin
-        ? {'email': email, 'password': password}
-        : {'email': email, 'password': password, 'display_name': name.isEmpty ? null : name};
+      ? {'email': email, 'password': password}
+      : {'email': email, 'password': password, 'display_name': name.isEmpty ? null : name};
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    if (hasJwt) headers['Authorization'] = 'Bearer ${Session.token}';
 
     try {
       final resp = await http.post(
         Uri.parse('$_apiBase$path'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: json.encode(body),
       );
 
@@ -88,6 +143,11 @@ class _AuthScreenState extends State<AuthScreen> {
 
         if (token != null) {
           _storeSessionFromToken(token);
+          if (_rememberMe) {
+            await _persistToken(token);
+          } else {
+            await _clearPersistedToken();
+          }
         } else {
           Session.clear();
         }
@@ -123,6 +183,12 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_checkingStored) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(_isLogin ? 'Log In' : 'Sign Up')),
       body: Center(
@@ -160,6 +226,19 @@ class _AuthScreenState extends State<AuthScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
+                CheckboxListTile(
+                  value: _rememberMe,
+                  onChanged: _submitting
+                      ? null
+                      : (v) {
+                          if (v == null) return;
+                          setState(() => _rememberMe = v);
+                        },
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: const Text('Stay logged in for 3 months'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                const SizedBox(height: 8),
                 if (_error != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8.0),
