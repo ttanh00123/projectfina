@@ -173,4 +173,5 @@ For inquiries about this project or technical discussions:
 ---
 
 **"The best finance app is the one you actually use. FinA makes using it feel less like work."**
+-me
 
