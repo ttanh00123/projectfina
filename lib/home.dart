@@ -70,48 +70,65 @@ class _MainAppState extends State<MainApp> {
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
         notchMargin: 6.0,
+        padding: EdgeInsets.zero,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: <Widget>[
-            InkWell(
-              onTap: () => _onItemTapped(0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.home, color: _selectedIndex == 0 ? Colors.amber[800] : Colors.grey),
-                  Text('Home', style: TextStyle(fontSize: 12, color: _selectedIndex == 0 ? Colors.amber[800] : Colors.grey)),
-                ],
+            Expanded(
+              child: InkWell(
+                onTap: () => _onItemTapped(0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    Icon(Icons.home, color: _selectedIndex == 0 ? Colors.amber[800] : Colors.grey),
+                    Text('Home', style: TextStyle(fontSize: 12, color: _selectedIndex == 0 ? Colors.amber[800] : Colors.grey)),
+                  ],
+                ),
               ),
             ),
-            InkWell(
-              onTap: () => _onItemTapped(1),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.analytics, color: _selectedIndex == 1 ? Colors.amber[800] : Colors.grey),
-                  Text('Analysis', style: TextStyle(fontSize: 12, color: _selectedIndex == 1 ? Colors.amber[800] : Colors.grey)),
-                ],
+            Container(width: 1, color: Colors.transparent),
+            Expanded(
+              child: InkWell(
+                onTap: () => _onItemTapped(1),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    Icon(Icons.analytics, color: _selectedIndex == 1 ? Colors.amber[800] : Colors.grey),
+                    Text('Analysis', style: TextStyle(fontSize: 12, color: _selectedIndex == 1 ? Colors.amber[800] : Colors.grey)),
+                  ],
+                ),
               ),
             ),
+            Container(width: 1, color: Colors.transparent),
             const SizedBox(width: 48), // Space for FAB
-            InkWell(
-              onTap: () => _onItemTapped(2),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.history, color: _selectedIndex == 2 ? Colors.amber[800] : Colors.grey),
-                  Text('History', style: TextStyle(fontSize: 12, color: _selectedIndex == 2 ? Colors.amber[800] : Colors.grey)),
-                ],
+            Container(width: 1, color: Colors.transparent),
+            Expanded(
+              child: InkWell(
+                onTap: () => _onItemTapped(2),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    Icon(Icons.history, color: _selectedIndex == 2 ? Colors.amber[800] : Colors.grey),
+                    Text('History', style: TextStyle(fontSize: 12, color: _selectedIndex == 2 ? Colors.amber[800] : Colors.grey)),
+                  ],
+                ),
               ),
             ),
-            InkWell(
-              onTap: () => _onItemTapped(3),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.settings, color: _selectedIndex == 3 ? Colors.amber[800] : Colors.grey),
-                  Text('Settings', style: TextStyle(fontSize: 12, color: _selectedIndex == 3 ? Colors.amber[800] : Colors.grey)),
-                ],
+            Container(width: 1, color: Colors.transparent),
+            Expanded(
+              child: InkWell(
+                onTap: () => _onItemTapped(3),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    Icon(Icons.settings, color: _selectedIndex == 3 ? Colors.amber[800] : Colors.grey),
+                    Text('Settings', style: TextStyle(fontSize: 12, color: _selectedIndex == 3 ? Colors.amber[800] : Colors.grey)),
+                  ],
+                ),
               ),
             ),
           ],
@@ -129,43 +146,12 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  Uint8List? _chartImage;
   List<dynamic> _todayTransactions = [];
-  bool _isLoadingChart = true;
+  List<dynamic> _allTransactions = [];
   bool _isLoadingTransactions = true;
 
-  // Fetch the pie chart from the backend
-  Future<void> fetchPieChart() async {
-    try {
-      final response = await http.post(
-        Uri.parse('http://160.191.101.179:8000/pie_chart'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'transactions': [], // You can pass all transactions or filter them
-          'chartType': 'category',
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        setState(() {
-          _chartImage = response.bodyBytes;
-          _isLoadingChart = false;
-        });
-      } else {
-        throw Exception('Failed to load pie chart');
-      }
-    } catch (e) {
-            if (mounted) {
-        setState(() {
-          _isLoadingChart = false;
-        });
-      }
-      print('Error fetching pie chart: $e');
-    }
-  }
-
-  // Fetch today's transactions from the backend
-  Future<void> fetchTodayTransactions() async {
+  // Fetch transactions from the backend
+  Future<void> fetchTransactions() async {
     try {
       final userId = Session.userId;
       if (userId == null) {
@@ -174,7 +160,7 @@ class _HomePageState extends State<HomePage> {
         }
         return;
       }
-      final response = await http.get(Uri.parse('http://160.191.101.179:8000/transactions?user_id=$userId'));
+      final response = await http.get(Uri.parse('http://api.conaudio.vn:8000/transactions?user_id=$userId'));
       if (response.statusCode == 200) {
         final List<dynamic> transactions = json.decode(response.body);
 
@@ -186,6 +172,7 @@ class _HomePageState extends State<HomePage> {
         }).toList();
 
         setState(() {
+          _allTransactions = transactions;
           _todayTransactions = todayTransactions;
           _isLoadingTransactions = false;
         });
@@ -202,46 +189,120 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // Calculate total spending for the current month
+  double getMonthlySpending() {
+    final now = DateTime.now();
+    final currentMonth = now.month;
+    final currentYear = now.year;
+
+    double total = 0;
+    for (var transaction in _allTransactions) {
+      try {
+        final dateParts = (transaction['date'] as String).split('-');
+        final year = int.parse(dateParts[0]);
+        final month = int.parse(dateParts[1]);
+
+        if (year == currentYear && month == currentMonth) {
+          total += double.parse(transaction['amount'].toString());
+        }
+      } catch (e) {
+        print('Error parsing transaction: $e');
+      }
+    }
+    return total;
+  }
+
   @override
   void initState() {
     super.initState();
-    fetchPieChart();
-    fetchTodayTransactions();
+    fetchTransactions();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Extract username from email (part before @)
+    final email = Session.email ?? '';
+    final userName = email.contains('@') ? email.split('@')[0] : email;
+    
     return SingleChildScrollView(
       child: Column(
         children: [
-          // Top box for the pie chart
+          // Welcome message
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(16.0),
-                child: _isLoadingChart
-                    ? const Center(child: CircularProgressIndicator())
-                    : _chartImage == null
-                        ? const Center(
-                            child: Text(
-                              'Failed to load pie chart',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                          )
-                        : Image.memory(
-                            _chartImage!,
-                            fit: BoxFit.contain,
-                          ),
+            child: Text(
+              'Welcome, $userName',
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
-
-          // Bottom box for today's transactions
+          // Two boxes for monthly spending and placeholder
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                // Left box: Monthly spending
+                Expanded(
+                  child: Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "This Month's Spending",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Center(
+                            child: Text(
+                              '\$${getMonthlySpending().toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Right box: Placeholder
+                Expanded(
+                  child: Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(16.0),
+                      child: const Center(
+                        child: Text(
+                          'Placeholder',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           Padding(
   padding: const EdgeInsets.all(16.0),
   child: Column(

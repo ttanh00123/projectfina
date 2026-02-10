@@ -38,7 +38,7 @@ class _AddTransactionState extends State<AddTransaction> {
     }
 
     try {
-      final url = Uri.parse('http://160.191.101.179:8000/generate');
+      final url = Uri.parse('http://api.conaudio.vn:8000/generate');
       final resp = await http.post(url,
           headers: {'Content-Type': 'application/json'},
           body: json.encode({'prompt': prompt}));
@@ -133,7 +133,7 @@ class _AddTransactionState extends State<AddTransaction> {
       }
 
       final token = Session.token;
-      final url = Uri.parse('http://160.191.101.179:8000/addTransaction');
+      final url = Uri.parse('http://api.conaudio.vn:8000/addTransaction');
       final resp = await http.post(
         url,
         headers: {
@@ -541,7 +541,7 @@ class _SecondRouteState extends State<SecondRoute> {
     }
 
     final token = Session.token;
-    final url = Uri.parse('http://160.191.101.179:8000/addTransaction');
+    final url = Uri.parse('http://api.conaudio.vn:8000/addTransaction');
     try {
       final response = await http.post(
         url,

@@ -28,7 +28,7 @@ class _HistoryPageState extends State<HistoryPage> {
       }
 
       final response = await http.get(
-        Uri.parse('http://160.191.101.179:8000/transactions?user_id=$userId'),
+        Uri.parse('http://api.conaudio.vn:8000/transactions?user_id=$userId'),
       );
       if (response.statusCode == 200) {
         setState(() {
@@ -60,8 +60,8 @@ class _HistoryPageState extends State<HistoryPage> {
       builder: (ctx) => EditTransactionDialog(
         transaction: transaction,
         onSave: (updatedTransaction) async {
+          Navigator.of(ctx).pop();
           await _updateTransaction(index, updatedTransaction);
-          Navigator.pop(ctx);
         },
       ),
     );
@@ -77,7 +77,7 @@ class _HistoryPageState extends State<HistoryPage> {
     try {
       final token = Session.token;
       final response = await http.put(
-        Uri.parse('http://160.191.101.179:8000/updateTransaction/${_transactions[index]['id']}'),
+        Uri.parse('http://api.conaudio.vn:8000/updateTransaction/${_transactions[index]['id']}'),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
@@ -92,6 +92,7 @@ class _HistoryPageState extends State<HistoryPage> {
             _isLoading = false;
           });
         }
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction updated.')));
       } else {
         throw Exception('Failed to update: ${response.statusCode}');
@@ -102,6 +103,7 @@ class _HistoryPageState extends State<HistoryPage> {
           _isLoading = false;
         });
       }
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error updating transaction: $e')));
     }
   }
@@ -120,6 +122,8 @@ class _HistoryPageState extends State<HistoryPage> {
         ],
       ),
     );
+
+    if (!mounted) return;
 
     if (shouldDelete != true) return;
 
@@ -152,12 +156,13 @@ class _HistoryPageState extends State<HistoryPage> {
             _isLoading = false;
           });
         }
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No valid IDs found for selected transactions.')));
         return;
       }
 
       // Send DELETE requests in parallel
-      final responses = await Future.wait(ids.map((id) => http.delete(Uri.parse('http://160.191.101.179:8000/deleteTransaction/$id'))));
+      final responses = await Future.wait(ids.map((id) => http.delete(Uri.parse('http://api.conaudio.vn:8000/deleteTransaction/$id'))));
 
       // Check results
       bool anyFailure = false;
@@ -182,8 +187,10 @@ class _HistoryPageState extends State<HistoryPage> {
       }
 
       if (anyFailure) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Some deletions failed on the server.')));
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Selected transactions deleted.')));
       }
     } catch (e) {
@@ -192,6 +199,7 @@ class _HistoryPageState extends State<HistoryPage> {
           _isLoading = false;
         });
       }
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error deleting transactions: $e')));
     }
   }

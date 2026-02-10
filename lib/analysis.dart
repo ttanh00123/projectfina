@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/scheduler.dart';
 import 'session.dart';
 
 class AnalysisPage extends StatefulWidget {
@@ -17,7 +18,15 @@ class _AnalysisPageState extends State<AnalysisPage> {
   List<dynamic> _transactions = [];
   bool _isLoading = true;
   TimeFrame _selectedTimeFrame = TimeFrame.month;
-  Map<String, double> _spendingData = {};
+  
+  // Line chart data
+  Map<String, double> _lineChartData = {};
+  List<FlSpot> _lineSpots = [];
+  List<String> _lineLabels = [];
+  
+  // Pie chart data (now storing amounts, not counts)
+  Map<String, double> _categoryAmount = {};
+  Map<String, double> _tagAmount = {};
 
   @override
   void initState() {
@@ -36,7 +45,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
       }
 
       final transactionsResponse = await http.get(
-        Uri.parse('http://160.191.101.179:8000/transactions?user_id=$userId'),
+        Uri.parse('http://api.conaudio.vn:8000/transactions?user_id=$userId'),
       );
 
       if (transactionsResponse.statusCode != 200) {
@@ -46,11 +55,16 @@ class _AnalysisPageState extends State<AnalysisPage> {
       final List<dynamic> transactions = json.decode(transactionsResponse.body);
       print('Fetched transactions: $transactions');
 
-      setState(() {
-        _transactions = transactions;
-        _isLoading = false;
-        _updateSpendingData();
-      });
+      if (mounted) {
+        setState(() {
+          _transactions = transactions;
+          _isLoading = false;
+        });
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          _processAllData();
+          if (mounted) setState(() {});
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -61,67 +75,80 @@ class _AnalysisPageState extends State<AnalysisPage> {
     }
   }
 
-  void _updateSpendingData() {
-    _spendingData.clear();
+  void _processAllData() {
+    _lineChartData.clear();
+    _categoryAmount.clear();
+    _tagAmount.clear();
+    _lineLabels.clear();
+
+    // Build ordered maps for line chart based on timeframe
+    Map<String, double> orderedData = {};
+    Map<String, String> keyToLabel = {};
 
     for (var transaction in _transactions) {
       try {
-        // Parse amount and date from transaction
         final amount = double.parse(transaction['amount'].toString());
         final dateStr = transaction['date'] as String;
         final date = DateTime.parse(dateStr);
+        final category = transaction['category']?.toString() ?? 'Uncategorized';
+        final tags = transaction['tags'];
+        final isIncome = transaction['type']?.toString().toLowerCase() == 'income';
 
-        String key;
+        // Process line chart data
+        String timeKey;
+        String timeLabel;
         switch (_selectedTimeFrame) {
           case TimeFrame.day:
-            key = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} ${date.hour}:00';
+            timeKey = '${date.hour.toString().padLeft(2, '0')}:00';
+            timeLabel = timeKey;
             break;
           case TimeFrame.week:
-            final weekStart = date.subtract(Duration(days: date.weekday - 1));
-            key =
-                '${weekStart.year}-${weekStart.month.toString().padLeft(2, '0')}-${weekStart.day.toString().padLeft(2, '0')}';
+            final dayOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][date.weekday - 1];
+            timeKey = date.weekday.toString().padLeft(2, '0');
+            timeLabel = dayOfWeek;
             break;
           case TimeFrame.month:
-            key = '${date.year}-${date.month.toString().padLeft(2, '0')}';
+            final weekNum = ((date.day - 1) ~/ 7) + 1;
+            timeKey = weekNum.toString().padLeft(2, '0');
+            timeLabel = 'Week $weekNum';
             break;
           case TimeFrame.year:
-            key = '${date.year}';
+            final monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.month - 1];
+            timeKey = date.month.toString().padLeft(2, '0');
+            timeLabel = monthName;
             break;
         }
 
-        _spendingData[key] = (_spendingData[key] ?? 0) + amount;
+        orderedData[timeKey] = (orderedData[timeKey] ?? 0) + amount;
+        keyToLabel[timeKey] = timeLabel;
+
+        // Process category pie chart (sum amounts)
+        if (!isIncome) {
+          _categoryAmount[category] = (_categoryAmount[category] ?? 0) + amount;
+        }
+
+        // Process tag pie chart (sum amounts)
+        if (!isIncome && tags is List) {
+          for (var tag in tags) {
+            final tagStr = tag.toString();
+            _tagAmount[tagStr] = (_tagAmount[tagStr] ?? 0) + amount;
+          }
+        }
       } catch (e) {
-        print('Error parsing transaction: $e');
+        print('Error processing transaction: $e');
       }
     }
 
-    // Sort by date
-    final sortedEntries = _spendingData.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
-    _spendingData = Map.fromEntries(sortedEntries);
-  }
-
-  List<FlSpot> _getChartSpots() {
-    final entries = _spendingData.entries.toList();
-    return List.generate(
-      entries.length,
-      (index) => FlSpot(index.toDouble(), entries[index].value),
-    );
-  }
-
-  List<String> _getXAxisLabels() {
-    return _spendingData.keys.map((key) {
-      switch (_selectedTimeFrame) {
-        case TimeFrame.day:
-          return key.split(' ')[1]; // Return hour
-        case TimeFrame.week:
-          return key;
-        case TimeFrame.month:
-          return key;
-        case TimeFrame.year:
-          return key;
-      }
-    }).toList();
+    // Build sorted line chart data
+    final sortedKeys = orderedData.keys.toList()..sort();
+    _lineSpots = [];
+    _lineLabels = [];
+    
+    for (int i = 0; i < sortedKeys.length; i++) {
+      final key = sortedKeys[i];
+      _lineSpots.add(FlSpot(i.toDouble(), orderedData[key]!));
+      _lineLabels.add(keyToLabel[key]!);
+    }
   }
 
   @override
@@ -139,83 +166,47 @@ class _AnalysisPageState extends State<AnalysisPage> {
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 )
-              : Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Select Time Frame:',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            children: [
-                              ChoiceChip(
-                                label: const Text('Day'),
-                                selected: _selectedTimeFrame == TimeFrame.day,
-                                onSelected: (selected) {
-                                  setState(() {
-                                    _selectedTimeFrame = TimeFrame.day;
-                                    _updateSpendingData();
-                                  });
-                                },
-                              ),
-                              ChoiceChip(
-                                label: const Text('Week'),
-                                selected: _selectedTimeFrame == TimeFrame.week,
-                                onSelected: (selected) {
-                                  setState(() {
-                                    _selectedTimeFrame = TimeFrame.week;
-                                    _updateSpendingData();
-                                  });
-                                },
-                              ),
-                              ChoiceChip(
-                                label: const Text('Month'),
-                                selected: _selectedTimeFrame == TimeFrame.month,
-                                onSelected: (selected) {
-                                  setState(() {
-                                    _selectedTimeFrame = TimeFrame.month;
-                                    _updateSpendingData();
-                                  });
-                                },
-                              ),
-                              ChoiceChip(
-                                label: const Text('Year'),
-                                selected: _selectedTimeFrame == TimeFrame.year,
-                                onSelected: (selected) {
-                                  setState(() {
-                                    _selectedTimeFrame = TimeFrame.year;
-                                    _updateSpendingData();
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Timeframe Dropdown
+                      DropdownButton<TimeFrame>(
+                        value: _selectedTimeFrame,
+                        items: TimeFrame.values.map((frame) {
+                          return DropdownMenuItem(
+                            value: frame,
+                            child: Text(frame.toString().split('.').last.toUpperCase()),
+                          );
+                        }).toList(),
+                        onChanged: (newFrame) {
+                          if (newFrame != null) {
+                            _selectedTimeFrame = newFrame;
+                            SchedulerBinding.instance.addPostFrameCallback((_) {
+                              _processAllData();
+                              if (mounted) setState(() {});
+                            });
+                          }
+                        },
                       ),
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: _spendingData.isEmpty
+                      const SizedBox(height: 24),
+
+                      // Line Chart - Spending Over Time
+                      const Text(
+                        'Amount Spent Over Time',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 300,
+                        child: _lineSpots.isEmpty
                             ? const Center(
-                                child: Text(
-                                  'No spending data for this time frame',
-                                  style: TextStyle(fontSize: 16),
-                                ),
+                                child: Text('No data for this timeframe'),
                               )
-                            : BarChart(
-                                BarChartData(
-                                  gridData: FlGridData(
-                                    show: true,
-                                    drawVerticalLine: false,
-                                    horizontalInterval: 50,
-                                  ),
+                            : LineChart(
+                                LineChartData(
+                                  gridData: FlGridData(show: true),
                                   titlesData: FlTitlesData(
                                     show: true,
                                     rightTitles: const AxisTitles(
@@ -227,16 +218,16 @@ class _AnalysisPageState extends State<AnalysisPage> {
                                     bottomTitles: AxisTitles(
                                       sideTitles: SideTitles(
                                         showTitles: true,
-                                        reservedSize: 30,
+                                        interval: 1,
                                         getTitlesWidget: (value, meta) {
-                                          final labels = _getXAxisLabels();
-                                          if (value.toInt() < 0 || value.toInt() >= labels.length) {
+                                          final index = value.toInt();
+                                          if (index < 0 || index >= _lineLabels.length) {
                                             return const SizedBox();
                                           }
-                                          return Transform.rotate(
-                                            angle: -0.5,
+                                          return Padding(
+                                            padding: const EdgeInsets.only(top: 8.0),
                                             child: Text(
-                                              labels[value.toInt()],
+                                              _lineLabels[index],
                                               style: const TextStyle(fontSize: 10),
                                             ),
                                           );
@@ -246,11 +237,10 @@ class _AnalysisPageState extends State<AnalysisPage> {
                                     leftTitles: AxisTitles(
                                       sideTitles: SideTitles(
                                         showTitles: true,
-                                        interval: 50,
-                                        reservedSize: 42,
+                                        reservedSize: 40,
                                         getTitlesWidget: (value, meta) {
                                           return Text(
-                                            '${value.toInt()}',
+                                            '\$${value.toInt()}',
                                             style: const TextStyle(fontSize: 10),
                                           );
                                         },
@@ -258,30 +248,133 @@ class _AnalysisPageState extends State<AnalysisPage> {
                                     ),
                                   ),
                                   borderData: FlBorderData(show: true),
-                                  barGroups: _getChartSpots()
-                                      .asMap()
-                                      .entries
-                                      .map(
-                                        (entry) => BarChartGroupData(
-                                          x: entry.key,
-                                          barRods: [
-                                            BarChartRodData(
-                                              toY: entry.value.y,
-                                              color: Colors.blue,
-                                              width: 12,
-                                              borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                                            ),
-                                          ],
-                                        ),
-                                      )
-                                      .toList(),
+                                  lineBarsData: [
+                                    LineChartBarData(
+                                      spots: _lineSpots,
+                                      isCurved: true,
+                                      color: Colors.blue,
+                                      barWidth: 3,
+                                      isStrokeCapRound: true,
+                                      dotData: const FlDotData(show: true),
+                                    ),
+                                  ],
                                   minY: 0,
                                 ),
                               ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 32),
+
+                      // Category Pie Chart
+                      const Text(
+                        'Transactions by Category',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 300,
+                        child: _categoryAmount.isEmpty
+                            ? const Center(child: Text('No category data'))
+                            : PieChart(
+                                PieChartData(
+                                  sections: _buildPieSections(_categoryAmount),
+                                  centerSpaceRadius: 40,
+                                ),
+                              ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildPieLegend(_categoryAmount),
+                      const SizedBox(height: 32),
+
+                      // Tags Pie Chart
+                      const Text(
+                        'Transactions by Tags',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 300,
+                        child: _tagAmount.isEmpty
+                            ? const Center(child: Text('No tag data'))
+                            : PieChart(
+                                PieChartData(
+                                  sections: _buildPieSections(_tagAmount),
+                                  centerSpaceRadius: 40,
+                                ),
+                              ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildPieLegend(_tagAmount),
+                    ],
+                  ),
                 ),
+    );
+  }
+
+  List<PieChartSectionData> _buildPieSections(Map<String, double> data) {
+    final total = data.values.fold<double>(0, (sum, val) => sum + val);
+    final colors = [
+      Colors.red,
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.cyan,
+      Colors.amber,
+      Colors.pink,
+      Colors.teal,
+      Colors.indigo,
+    ];
+
+    return data.entries.toList().asMap().entries.map((entry) {
+      final index = entry.key;
+      final item = entry.value;
+      final percentage = (item.value / total) * 100;
+
+      return PieChartSectionData(
+        value: item.value,
+        title: '${percentage.toStringAsFixed(1)}%',
+        color: colors[index % colors.length],
+        titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+      );
+    }).toList();
+  }
+
+  Widget _buildPieLegend(Map<String, double> data) {
+    final colors = [
+      Colors.red,
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.cyan,
+      Colors.amber,
+      Colors.pink,
+      Colors.teal,
+      Colors.indigo,
+    ];
+
+    return Wrap(
+      spacing: 16,
+      runSpacing: 8,
+      children: data.entries.toList().asMap().entries.map((entry) {
+        final index = entry.key;
+        final item = entry.value;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: colors[index % colors.length],
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text('${item.key} (\$${item.value.toStringAsFixed(2)})'),
+          ],
+        );
+      }).toList(),
     );
   }
 }
