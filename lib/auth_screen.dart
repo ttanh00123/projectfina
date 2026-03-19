@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:taexpense/app_constants.dart';
 import 'home.dart';
 import 'session.dart';
 
@@ -24,7 +25,7 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _checkingStored = true;
   String? _error;
 
-  static const String _apiBase = 'http://160.191.101.179:8000'; // backend base
+  // static const String _apiBase = 'http://160.191.101.179:8000'; // backend base
 
   Map<String, dynamic>? _decodeJwtPayload(String token) {
     try {
@@ -117,8 +118,8 @@ class _AuthScreenState extends State<AuthScreen> {
 
     final hasJwt = Session.token != null && Session.token!.isNotEmpty;
     final path = _isLogin
-      ? (hasJwt ? '/auth/login/token' : '/auth/login')
-      : '/auth/signup';
+      ? (hasJwt ? AppConstants.LOGIN_BY_TOKEN_API : AppConstants.LOGIN_API)
+      : AppConstants.SIGNUP_API;
     final body = _isLogin
       ? {'email': email, 'password': password}
       : {'email': email, 'password': password, 'display_name': name.isEmpty ? null : name};
@@ -127,7 +128,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
     try {
       final resp = await http.post(
-        Uri.parse('$_apiBase$path'),
+        Uri.parse(path),
         headers: headers,
         body: json.encode(body),
       );
@@ -189,107 +190,113 @@ class _AuthScreenState extends State<AuthScreen> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(title: Text(_isLogin ? 'Log In' : 'Sign Up')),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (!_isLogin)
+    return SafeArea(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Image.asset('assets/icon/3.png', height: 40),
+          backgroundColor: Colors.blue,
+        ),
+        // appBar: AppBar(title: Text(_isLogin ? 'Log In' : 'Sign Up')),
+        body: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (!_isLogin)
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(labelText: 'Name'),
+                    ),
                   TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(labelText: 'Name'),
-                  ),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Enter email';
-                    if (!v.contains('@')) return 'Invalid email';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(labelText: 'Password'),
-                  obscureText: true,
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Enter password';
-                    if (v.length < 6) return 'Min 6 characters';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                CheckboxListTile(
-                  value: _rememberMe,
-                  onChanged: _submitting
-                      ? null
-                      : (v) {
-                          if (v == null) return;
-                          setState(() => _rememberMe = v);
-                        },
-                  controlAffinity: ListTileControlAffinity.leading,
-                  title: const Text('Stay logged in for 3 months'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-                const SizedBox(height: 8),
-                if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Text(_error!, style: const TextStyle(color: Colors.red)),
-                  ),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _submitting ? null : _submit,
-                    child: _submitting
-                        ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                        : Text(_isLogin ? 'Log In' : 'Sign Up'),
-                  ),
-                ),
-                TextButton(
-                  onPressed: _submitting
-                      ? null
-                      : () {
-                          setState(() {
-                            _isLogin = !_isLogin;
-                            _error = null;
-                          });
-                        },
-                  child: Text(_isLogin ? 'Need an account? Sign up' : 'Have an account? Log in'),
-                ),
-                const SizedBox(height: 8),
-                const Divider(),
-                const SizedBox(height: 8),
-                // OAuth placeholders – wire real flows later
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.account_circle),
-                    label: const Text('Continue with Google'),
-                    onPressed: () {
-                      setState(() => _error = 'Google OAuth flow not implemented in UI yet');
+                    controller: _emailController,
+                    decoration: const InputDecoration(labelText: 'Email'),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Enter email';
+                      if (!v.contains('@')) return 'Invalid email';
+                      return null;
                     },
                   ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.facebook),
-                    label: const Text('Continue with Facebook'),
-                    onPressed: () {
-                      setState(() => _error = 'Facebook OAuth flow not implemented in UI yet');
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _passwordController,
+                    decoration: const InputDecoration(labelText: 'Password'),
+                    obscureText: true,
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Enter password';
+                      if (v.length < 6) return 'Min 6 characters';
+                      return null;
                     },
                   ),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  CheckboxListTile(
+                    value: _rememberMe,
+                    onChanged: _submitting
+                        ? null
+                        : (v) {
+                            if (v == null) return;
+                            setState(() => _rememberMe = v);
+                          },
+                    controlAffinity: ListTileControlAffinity.leading,
+                    title: const Text('Stay logged in for 3 months'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(height: 8),
+                  if (_error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                    ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _submitting ? null : _submit,
+                      child: _submitting
+                          ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                          : Text(_isLogin ? 'Log In' : 'Sign Up'),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _submitting
+                        ? null
+                        : () {
+                            setState(() {
+                              _isLogin = !_isLogin;
+                              _error = null;
+                            });
+                          },
+                    child: Text(_isLogin ? 'Need an account? Sign up' : 'Have an account? Log in'),
+                  ),
+                  const SizedBox(height: 8),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  // OAuth placeholders – wire real flows later
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.account_circle),
+                      label: const Text('Continue with Google'),
+                      onPressed: () {
+                        setState(() => _error = 'Google OAuth flow not implemented in UI yet');
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.facebook),
+                      label: const Text('Continue with Facebook'),
+                      onPressed: () {
+                        setState(() => _error = 'Facebook OAuth flow not implemented in UI yet');
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

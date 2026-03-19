@@ -1,0 +1,16 @@
+{
+    "user_id": 2817,
+    "fullName": "Test User",
+    "mobile": "0912345670",
+    "password": "",
+    "email": "trantrung22@gmail.com",
+    "birthDay": "",
+    "gender": 0,
+    "otp": "",
+    "avatar": "new avatar",
+    "expiry": "",
+    "createdAt": "2025-07-20T07:57:14.000Z",
+    "updatedAt": "2025-09-10T17:13:24.000Z",
+    "pushNotiToken": "",
+    "address": ""
+}
