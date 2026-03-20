@@ -62,3 +62,4 @@ app.*.map.json
 /android/app/.metadata
 /android/app/build/
 /macos/
+trungt_notes.txt

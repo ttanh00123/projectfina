@@ -121,7 +121,7 @@ class _AddTransactionState extends State<AddTransaction> {
     }
 
     try {
-      final userId = Session.userId;
+      final userId = Session.user?.id;
       if (userId == null) {
         if (mounted) {
           setState(() {
@@ -526,7 +526,7 @@ class _SecondRouteState extends State<SecondRoute> {
       _isSubmitting = true;
     });
 
-    final userId = Session.userId;
+    final userId = Session.user?.id;
     if (userId == null) {
       if (mounted) {
         setState(() {

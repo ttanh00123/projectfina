@@ -7,6 +7,8 @@ import 'package:taexpense/screens/login_screen.dart';
 import 'package:taexpense/services/auth_service.dart';
 import 'package:taexpense/utils/colors_util.dart';
 import 'package:taexpense/widgets/app_icon.dart';
+import 'package:taexpense/widgets/fina_widgets.dart';
+import '../theme/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
   static String routeName = "/splash-screen";
@@ -46,22 +48,11 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        backgroundColor: ColorUtil.primary,
+    return const Scaffold(
+        backgroundColor: kBg,
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const AppIcon(size: 100, iconSize: 50),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text('TA Expense',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineSmall!
-                        .copyWith(color: Colors.white)),
-              ),
-            ],
+          child: FinaLogo(
+            size: 120
           ),
         ));
   }

@@ -1,17 +1,16 @@
+import 'package:taexpense/models/user_model.dart';
+
 class Session {
   static String? token;
-  static int? userId;
-  static String? email;
+  static UserModel? user;
 
-  static void setSession({required String jwt, int? id, String? mail}) {
+  static void setSession({required String jwt, UserModel? userData}) {
     token = jwt;
-    userId = id;
-    email = mail;
+    user = userData;
   }
 
   static void clear() {
     token = null;
-    userId = null;
-    email = null;
+    user = null;
   }
 }

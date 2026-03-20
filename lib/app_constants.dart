@@ -20,5 +20,33 @@ class AppConstants {
   static const String TRANSACTION_TYPES_API = "$BASE_URL/transaction-types/";
   static const String CATEGORIES_API = "$BASE_URL/categories/";
 
+  //PROMPT
+  static const String PROMPT_API = "$BASE_URL/transaction/prompt";
   
 }
+
+const kCurrencies = ['VND','SGD','USD','EUR','GBP','JPY','AUD','CAD','THB','MYR'];
+
+const kCurrencySymbols = {
+  'VND': '₫', 'SGD': 'S\$', 'USD': '\$', 'EUR': '€',
+  'GBP': '£', 'JPY': '¥',  'AUD': 'A\$','CAD': 'C\$',
+  'THB': '฿', 'MYR': 'RM',
+};
+
+const kCountries = {
+  'VN': '🇻🇳 Vietnam',
+  'SG': '🇸🇬 Singapore',
+  'US': '🇺🇸 United States',
+};
+
+const kDefaultCurrency = {
+  'VN': 'VND', 'SG': 'SGD', 'US': 'USD',
+};
+
+const kCategories = [
+  'Food & Drinks', 'Shopping', 'Transport', 'Entertainment',
+  'Health', 'Education', 'Housing', 'Utilities',
+  'Salary', 'Business', 'Investment', 'Transfer', 'Other',
+];
+
+const kWallets = ['Cash', 'Bank', 'VISA', 'Mastercard', 'MoMo', 'ZaloPay', 'Other'];

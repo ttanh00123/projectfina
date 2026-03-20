@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:taexpense/screens/login_screen.dart';
 
@@ -149,4 +152,19 @@ class Utils {
   static String moneyClearFormat(String value) {
     return value.replaceAll(',', '').replaceAll('.', '');
   }
+
+  static String extractError(http.Response r) {
+    try { return (jsonDecode(r.body)['detail'] as String?) ?? 'Error ${r.statusCode}'; }
+    catch (_) { return 'Error ${r.statusCode}'; }
+  }
 }
+
+class ApiException implements Exception {
+  final String message;
+  final int? statusCode;
+  ApiException(this.message, {this.statusCode});
+  @override String toString() => message;
+}
+
+
+

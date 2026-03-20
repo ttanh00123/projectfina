@@ -17,7 +17,7 @@ class _HistoryPageState extends State<HistoryPage> {
   // Function to fetch transactions from the API
   Future<void> fetchTransactions() async {
     try {
-      final userId = Session.userId;
+      final userId = Session.user?.id;
       if (userId == null) {
         if (mounted) {
           setState(() {

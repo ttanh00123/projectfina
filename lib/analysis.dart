@@ -36,7 +36,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
   Future<void> fetchTransactions() async {
     try {
-      final userId = Session.userId;
+      final userId = Session.user?.id;
       if (userId == null) {
         setState(() {
           _isLoading = false;

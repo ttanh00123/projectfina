@@ -153,7 +153,7 @@ class _HomePageState extends State<HomePage> {
   // Fetch transactions from the backend
   Future<void> fetchTransactions() async {
     try {
-      final userId = Session.userId;
+      final userId = Session.user?.id;
       if (userId == null) {
         if (mounted) {
           setState(() { _isLoadingTransactions = false; });
@@ -221,7 +221,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     // Extract username from email (part before @)
-    final email = Session.email ?? '';
+    final email = Session.user?.email ?? '';
     final userName = email.contains('@') ? email.split('@')[0] : email;
     
     return SingleChildScrollView(

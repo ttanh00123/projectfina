@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:taexpense/screens/home_screen.dart';
 import 'package:taexpense/screens/login_screen.dart';
 import 'package:taexpense/screens/signup_screen.dart';
 import 'package:taexpense/screens/splash_screen.dart';
+import 'package:taexpense/theme/app_theme.dart';
 import 'home.dart';
 import 'auth_screen.dart';
 import 'locale_provider.dart';
@@ -27,7 +29,7 @@ class MyApp extends StatelessWidget {
     final localeProvider = Provider.of<LocaleProvider>(context);
     
     return MaterialApp(
-      title: 'TAExpense',
+      title: 'FinA',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
         useMaterial3: true,
@@ -56,6 +58,20 @@ class MyApp extends StatelessWidget {
             borderRadius: BorderRadius.circular(30.0),
             borderSide: const BorderSide(color: Colors.red, width: 2.0),
           ),
+          
+        ),
+
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.indigo,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            elevation: 0,
+            minimumSize: const Size(double.infinity, 50),
+          )),
+        
+        textTheme: ThemeData.light().textTheme.copyWith(
+          bodyMedium: const TextStyle(color: kText)
         ),
       ),
       locale: localeProvider.locale,
