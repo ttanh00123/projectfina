@@ -56,8 +56,8 @@ class SettingsScreen extends StatelessWidget {
           _InfoTile(icon: Icons.mail_outlined, label: 'Email', value: user?.email ?? '—'),
           _InfoTile(icon: Icons.wc_rounded, label: 'Gender',
             value: {'M':'Male','F':'Female','O':'Other'}[user?.gender] ?? '—'),
-          _InfoTile(icon: Icons.cake_outlined, label: 'Birthday',
-            value: user != null ? DateFormat('dd MMM yyyy').format(user.birthDate!) : '—'),
+          // _InfoTile(icon: Icons.cake_outlined, label: 'Birthday',
+          //   value: user != null ? DateFormat('dd MMM yyyy').format(user.birthDate) : '—'),
         ]),
         const SizedBox(height: 16),
 

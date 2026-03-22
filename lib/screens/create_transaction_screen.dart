@@ -8,6 +8,7 @@ import 'package:taexpense/models/transaction_data.dart';
 import 'package:taexpense/services/transaction_service.dart' as TransactionService;
 import 'package:taexpense/session.dart';
 import 'package:taexpense/utils/utils.dart';
+import 'package:taexpense/widgets/calculator_sheet.dart';
 // import '../models/user.dart';
 // import '../services/api_service.dart';
 // import '../services/auth_provider.dart';
@@ -217,9 +218,9 @@ class _TypeToggle extends StatelessWidget {
     decoration: BoxDecoration(color: kBorder.withOpacity(0.4),
       borderRadius: BorderRadius.circular(14)),
     child: Row(children: [
-      _Toggle(label: '💸  Expense', val: 'expense', active: value == 'expense',
+      _Toggle(label: 'Expense', val: 'expense', active: value == 'expense',
         activeColor: kExpense, onTap: () => onChanged('expense')),
-      _Toggle(label: '💰  Income', val: 'income', active: value == 'income',
+      _Toggle(label: 'Income', val: 'income', active: value == 'income',
         activeColor: kIncome, onTap: () => onChanged('income')),
     ]),
   );
@@ -247,40 +248,115 @@ class _Toggle extends StatelessWidget {
 }
 
 // ── Amount Field ──────────────────────────────────────────────────────────────
+// class _AmountField extends StatelessWidget {
+//   final TextEditingController controller;
+//   const _AmountField({required this.controller});
+//   @override
+//   Widget build(BuildContext context) => Column(
+//     crossAxisAlignment: CrossAxisAlignment.start,
+//     children: [
+//       Text('Amount', style: GoogleFonts.dmSans(
+//         fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF374151))),
+//       const SizedBox(height: 6),
+//       TextFormField(
+//         controller: controller,
+//         keyboardType: const TextInputType.numberWithOptions(decimal: true),
+//         inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))],
+//         style: GoogleFonts.spaceGrotesk(fontSize: 20, fontWeight: FontWeight.w700, color: kText),
+//         validator: (v) {
+//           if (v == null || v.isEmpty) return 'Required';
+//           if (double.tryParse(v.replaceAll(',', '')) == null) return 'Invalid';
+//           return null;
+//         },
+//         decoration: InputDecoration(
+//           hintText: '0',
+//           hintStyle: GoogleFonts.spaceGrotesk(fontSize: 20, color: kBorder),
+//           prefixIcon: const Icon(Icons.attach_money_rounded, color: kSubtext, size: 20),
+//           filled: true, fillColor: const Color(0xFFF9FAFB),
+//           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+//           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+//             borderSide: const BorderSide(color: kBorder)),
+//           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+//             borderSide: const BorderSide(color: kBorder)),
+//           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+//             borderSide: const BorderSide(color: kPrimary, width: 2)),
+//           errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+//             borderSide: const BorderSide(color: kError)),
+//         ),
+//       ),
+//     ],
+//   );
+// }
+
+// Thay _AmountField bằng cái này trong create_transaction_screen.dart
+
 class _AmountField extends StatelessWidget {
   final TextEditingController controller;
   const _AmountField({required this.controller});
+
+  Future<void> _openCalculator(BuildContext context) async {
+    final raw = controller.text.replaceAll(',', '');
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => CalculatorSheet(initialValue: raw),
+    );
+    if (result != null) {
+      // Format số có dấu phẩy ngàn
+      final val = double.tryParse(result);
+      if (val != null) {
+        controller.text = NumberFormat('#,##0.##', 'vi_VN').format(val);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Text('Amount', style: GoogleFonts.dmSans(
-        fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF374151))),
+        fontSize: 13, fontWeight: FontWeight.w600,
+        color: const Color(0xFF374151))),
       const SizedBox(height: 6),
-      TextFormField(
-        controller: controller,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))],
-        style: GoogleFonts.spaceGrotesk(fontSize: 20, fontWeight: FontWeight.w700, color: kText),
-        validator: (v) {
-          if (v == null || v.isEmpty) return 'Required';
-          if (double.tryParse(v.replaceAll(',', '')) == null) return 'Invalid';
-          return null;
-        },
-        decoration: InputDecoration(
-          hintText: '0',
-          hintStyle: GoogleFonts.spaceGrotesk(fontSize: 20, color: kBorder),
-          prefixIcon: const Icon(Icons.attach_money_rounded, color: kSubtext, size: 20),
-          filled: true, fillColor: const Color(0xFFF9FAFB),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: kBorder)),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: kBorder)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: kPrimary, width: 2)),
-          errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: kError)),
+      ValueListenableBuilder<TextEditingValue>(
+        valueListenable: controller,
+        builder: (_, value, __) => GestureDetector(
+          onTap: () => _openCalculator(context),
+          child: Container(
+            height: 52,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF9FAFB),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: value.text.isEmpty ? kBorder : kPrimary,
+                width: value.text.isEmpty ? 1 : 2,
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                const Icon(Icons.attach_money_rounded,
+                    color: kSubtext, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    value.text.isEmpty ? '0' : value.text,
+                    style: GoogleFonts.spaceGrotesk(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: value.text.isEmpty ? kBorder : kText,
+                    ),
+                  ),
+                ),
+                Icon(Icons.calculate_outlined,
+                    size: 18, color: kPrimary.withOpacity(0.6)),
+              ],
+            ),
+          ),
         ),
       ),
     ],

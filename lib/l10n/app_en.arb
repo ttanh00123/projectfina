@@ -10,5 +10,11 @@
   "noTransactions": "No transactions found for today",
   "amount": "Amount",
   "category": "Category",
-  "quickAdd": "Quick Add Transaction"
+  "quickAdd": "Quick Add Transaction",
+  "walletTypeCash": "Cash",
+  "walletTypeBank": "Bank account",
+  "walletTypeCredit": "Credit card",
+  "walletTypeEwallet": "E-wallet",
+  "walletTypeInvestment": "Investment",
+  "walletTypeSavings": "Savings"
 }

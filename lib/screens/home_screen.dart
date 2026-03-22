@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 // import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:taexpense/screens/create_transaction_screen.dart';
+import 'package:taexpense/screens/create_wallet_screen.dart';
 import 'package:taexpense/session.dart';
 import 'package:taexpense/widgets/app_icon.dart';
 // import '../services/auth_provider.dart';
@@ -30,24 +32,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        backgroundColor: kBg,
-        body: Column(children: [
+    return Scaffold(
+      backgroundColor: kBg,
+      body: SafeArea(
+        child: Column(children: [
           _Header(),
           Expanded(child: _tab == 2 ? const SizedBox.shrink() : _pages[_tab]),
         ]),
-        bottomNavigationBar: _BottomNav(
-          current: _tab,
-          onTap: (i) {
-            if (i == 2) {
-              Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const ChatScreen()));
-            } else {
-              setState(() => _tab = i);
-            }
-          },
-        ),
+      ),
+      bottomNavigationBar: _BottomNav(
+        current: _tab,
+        onTap: (i) {
+          if (i == 2) {
+            Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const ChatScreen()));
+          } else {
+            setState(() => _tab = i);
+          }
+        },
       ),
     );
   }
@@ -262,9 +264,9 @@ class _QuickActions extends StatelessWidget {
   Widget build(BuildContext context) => Row(children: [
     for (final item in [
       (Icons.add_circle_outline_rounded, 'Add', () => Navigator.push(context,
-        MaterialPageRoute(builder: (_) => const ChatScreen()))),
+        MaterialPageRoute(builder: (_) => const CreateTransactionScreen()))),
       (Icons.bar_chart_rounded, 'Reports', () {}),
-      (Icons.account_balance_wallet_outlined, 'Wallets', () {}),
+      (Icons.account_balance_wallet_outlined, 'Wallets', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateWalletScreen()))),
       (Icons.swap_horiz_rounded, 'Transfer', () {}),
     ])
       Expanded(child: GestureDetector(

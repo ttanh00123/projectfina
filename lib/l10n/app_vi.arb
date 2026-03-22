@@ -1,6 +1,6 @@
 {
   "@@locale": "vi",
-  "appTitle": "TA Chi Tiêu",
+  "appTitle": "FinA",
   "home": "Trang Chủ",
   "analysis": "Phân Tích",
   "history": "Lịch Sử",
@@ -10,5 +10,11 @@
   "noTransactions": "Không có giao dịch nào hôm nay",
   "amount": "Số Tiền",
   "category": "Danh Mục",
-  "quickAdd": "Thêm Giao Dịch Nhanh"
+  "quickAdd": "Thêm Giao Dịch Nhanh",
+  "walletTypeCash": "Tiền mặt",
+  "walletTypeBank": "Tài khoản ngân hàng",
+  "walletTypeCredit": "Thẻ tín dụng",
+  "walletTypeEwallet": "Ví điện tử",
+  "walletTypeInvestment": "Đầu tư",
+  "walletTypeSavings": "Tiết kiệm"
 }

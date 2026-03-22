@@ -91,7 +91,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final userId = Session.user!.id;
 
     try {
-      final result = await sendPrompt(t, userId, token);
+      final result = await sendPrompt(t, userId!, token);
       _removeLoading();
       final d = result.data;
       final amtFmt = NumberFormat('#,##0', 'vi_VN').format(d.amount);
@@ -410,7 +410,7 @@ class _InputBar extends StatelessWidget {
           child: AnimatedBuilder(
             animation: micAnim,
             builder: (_, __) => Container(
-              width: 52, height: 52,
+              width: 42, height: 42,
               decoration: BoxDecoration(
                 color: listening
                   ? Color.lerp(kError, const Color(0xFFFF6B6B), micAnim.value)!

@@ -70,6 +70,8 @@ class FinaButton extends StatelessWidget {
 }
 
 // ── Text Field ────────────────────────────────────────────────────────────────
+// lib/widgets/fina_widgets.dart
+
 class FinaField extends StatelessWidget {
   final String label;
   final String? hint;
@@ -80,10 +82,13 @@ class FinaField extends StatelessWidget {
   final Widget? prefix, suffix;
   final bool readOnly;
   final VoidCallback? onTap;
+  final ValueChanged<String>? onChanged; // thêm dòng này
+
   const FinaField({super.key, required this.label, this.hint,
     required this.controller, this.obscure = false,
     this.keyboard = TextInputType.text, this.validator,
-    this.prefix, this.suffix, this.readOnly = false, this.onTap});
+    this.prefix, this.suffix, this.readOnly = false,
+    this.onTap, this.onChanged}); // thêm this.onChanged
 
   @override
   Widget build(BuildContext context) => Column(
@@ -96,6 +101,7 @@ class FinaField extends StatelessWidget {
         controller: controller, obscureText: obscure,
         keyboardType: keyboard, validator: validator,
         readOnly: readOnly, onTap: onTap,
+        onChanged: onChanged, // thêm dòng này
         style: GoogleFonts.dmSans(fontSize: 15, color: kText),
         decoration: InputDecoration(
           hintText: hint, prefixIcon: prefix, suffixIcon: suffix),

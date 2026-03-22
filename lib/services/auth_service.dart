@@ -98,7 +98,7 @@ Future updateFCMToken(userId, token) async {
   data["push_noti_token"] = token;
   final response = await http.put(
       Uri.parse(AppConstants.UPDATE_FMC_TOKEN_API.format(userId)),
-      headers: Utils.buildRequestHeader(AppConstants.API_TOKEN),
+      headers: Utils.buildRequestHeader(token),
       body: jsonEncode(data));
 
   if (response.statusCode == StatusCode.OK) {
@@ -113,11 +113,19 @@ Future updateFCMToken(userId, token) async {
 }
 
 Future<UserModel?> loginWithToken() async {
-  try{
+  String? token = await AuthStorage.getToken();
+  debugPrint('Token: $token', wrapWidth: 1024);
+  
+  if (token == null || token.isEmpty) {
+    logger.d("No token found in storage");
+    return null;
+  }
+  
+  try {
     final response = await http
         .post(Uri.parse(AppConstants.LOGIN_BY_TOKEN_API),
-            headers: Utils.buildRequestHeader(AppConstants.API_TOKEN),
-            body: jsonEncode({'token': AppConstants.API_TOKEN}))
+            headers: Utils.buildRequestHeader(token),
+            body: jsonEncode({'token': token}))
         .timeout(const Duration(seconds: 8));
 
     if (response.statusCode == StatusCode.OK) {
@@ -125,21 +133,17 @@ Future<UserModel?> loginWithToken() async {
       bool ok = userData['result'];
       if (ok) {
         UserModel user = UserModel.fromJson(userData['user']);
+        await AuthStorage.saveSession(token, user);
         //If no FCM Token available? update it
         updateFCMTokenIfNeeded(user);
 
-        await AuthStorage.saveSession(AppConstants.API_TOKEN!, user);
         return user;
-      } else {
-        return null;
       }
-    } else {
-      return null;
     }
   } catch (e) {
     logger.e("Error during login with token: $e");
-    return null;
   }
+  return null;
 }
 
 Future<UserModel?> loginWithPassword(

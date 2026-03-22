@@ -3,8 +3,8 @@
 import 'package:taexpense/models/user_model.dart';
 
 class AppConstants {
-  static UserModel? LOGIN_USER;
-  static String? API_TOKEN;
+  // static UserModel? LOGIN_USER;
+  // static String? API_TOKEN;
   
   static const String BASE_URL = "http://api.conaudio.vn:8000";
 
