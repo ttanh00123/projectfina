@@ -3,17 +3,22 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:taexpense/utils/app_settings.dart';
 import 'package:taexpense/screens/home_screen.dart';
 import 'package:taexpense/screens/login_screen.dart';
 import 'package:taexpense/screens/onboarding_screen.dart';
 import 'package:taexpense/screens/signup_screen.dart';
 import 'package:taexpense/screens/splash_screen.dart';
+import 'package:taexpense/screens/wallet_list_screen.dart';
 import 'package:taexpense/theme/app_theme.dart';
 import 'home.dart';
 import 'auth_screen.dart';
 import 'locale_provider.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AppSettings.load();
+
   runApp(
     ChangeNotifierProvider(
       create: (_) => LocaleProvider(),
@@ -23,6 +28,7 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
+  
   const MyApp({super.key});
 
   @override
@@ -75,18 +81,17 @@ class MyApp extends StatelessWidget {
           bodyMedium: const TextStyle(color: kText)
         ),
       ),
-      locale: localeProvider.locale,
       debugShowCheckedModeBanner: false,
+      
+      locale: localeProvider.locale,
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('en'),
-        Locale('vi'),
-      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      
       // home: const LoginScreen(),
       initialRoute: SplashScreen.routeName,
       routes: {
@@ -94,6 +99,7 @@ class MyApp extends StatelessWidget {
         LoginScreen.routeName: (context) => const LoginScreen(),
         HomeScreen.routeName: (context) => const HomeScreen(),
         OnboardingScreen.routeName: (context) => const OnboardingScreen(),
+        WalletListScreen.routeName: (_) => const WalletListScreen(),
       },
     );
   }

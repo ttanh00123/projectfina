@@ -9,6 +9,7 @@ import 'package:taexpense/screens/signup_screen.dart';
 import 'package:taexpense/services/auth_service.dart';
 import 'package:taexpense/services/auth_storage.dart';
 import 'package:taexpense/services/master_data_store.dart';
+import 'package:taexpense/services/settings_service.dart';
 import 'package:taexpense/utils/colors_util.dart';
 import 'package:taexpense/widgets/app_icon.dart';
 import 'package:taexpense/widgets/fina_widgets.dart';
@@ -202,9 +203,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (loginUser != null) {
         if (context.mounted) {
-          var token = await AuthStorage.getToken() ?? '';
-          var _locale = 'vi';
-          await MasterDataStore().sync(token, locale: _locale);
+          //Sync Master Data với locale mới
+          await MasterDataStore().sync(await AuthStorage.getToken() ?? '', locale: await SettingsService.getLocale());
+          
           Navigator.pushReplacementNamed(context, HomeScreen.routeName);
         }
       } else {

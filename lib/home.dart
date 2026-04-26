@@ -304,76 +304,76 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           Padding(
-  padding: const EdgeInsets.all(16.0),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      // Title for today's transactions
-      const Padding(
-        padding: EdgeInsets.only(bottom: 8.0),
-        child: Text(
-          "Today's Transactions",
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-      // Card for today's transactions
-      Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(16.0),
-          child: _isLoadingTransactions
-              ? const Center(child: CircularProgressIndicator())
-              : _todayTransactions.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No transactions found for today',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                    )
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _todayTransactions.length,
-                      itemBuilder: (context, index) {
-                        final transaction = _todayTransactions[index];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                transaction['content'],
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Amount: ${transaction['amount']} ${transaction['currency']}',
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Category: ${transaction['category']}',
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title for today's transactions
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 8.0),
+                  child: Text(
+                    "Today's Transactions",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
-        ),
-      ),
-    ],
-  ),
-),
+                  ),
+                ),
+                // Card for today's transactions
+                Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(16.0),
+                    child: _isLoadingTransactions
+                        ? const Center(child: CircularProgressIndicator())
+                        : _todayTransactions.isEmpty
+                            ? const Center(
+                                child: Text(
+                                  'No transactions found for today',
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                ),
+                              )
+                            : ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: _todayTransactions.length,
+                                itemBuilder: (context, index) {
+                                  final transaction = _todayTransactions[index];
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          transaction['content'],
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Amount: ${transaction['amount']} ${transaction['currency']}',
+                                          style: const TextStyle(fontSize: 16),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Category: ${transaction['category']}',
+                                          style: const TextStyle(fontSize: 16),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

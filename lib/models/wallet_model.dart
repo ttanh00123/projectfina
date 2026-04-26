@@ -2,7 +2,6 @@
 import 'package:taexpense/constants/wallet_types.dart';
 import 'package:taexpense/models/wallet_type.dart';
 
-
 class WalletModel {
   final int id;
   final int userid;
@@ -16,6 +15,7 @@ class WalletModel {
   final int status;
   final int sortOrder;
   final String color;
+  final int? dueDay;
   final DateTime createdAt;
 
   const WalletModel({
@@ -31,6 +31,7 @@ class WalletModel {
     required this.status,
     required this.sortOrder,
     required this.color,
+    this.dueDay,
     required this.createdAt,
   });
 
@@ -51,49 +52,51 @@ class WalletModel {
   // --- Serialization ---
 
   factory WalletModel.fromJson(Map<String, dynamic> json) => WalletModel(
-        id:            json['id'] as int,
-        userid:        json['userid'] as int,
-        name:          json['name'] as String,
-        walletType:    walletTypeByKey(json['wallet_type'] as String),
-        currency:      json['currency'] as String? ?? 'VND',
-        balance:       double.parse(json['balance'].toString()),
+        id: json['id'] as int,
+        userid: json['userid'] as int,
+        name: json['name'] as String,
+        walletType: walletTypeByKey(json['wallet_type'] as String),
+        currency: json['currency'] as String? ?? 'VND',
+        balance: double.parse(json['balance'].toString()),
         accountNumber: json['account_number'] as String?,
-        bankName:      json['bank_name'] as String?,
-        creditLimit:   json['credit_limit'] != null
-                           ? double.parse(json['credit_limit'].toString())
-                           : null,
-        status:        json['status'] as int? ?? 1,
-        sortOrder:     json['sort_order'] as int? ?? 0,
-        color:         json['color'] as String? ?? '#1D9E75',
-        createdAt:     DateTime.parse(json['created_at'] as String),
+        bankName: json['bank_name'] as String?,
+        creditLimit: json['credit_limit'] != null
+            ? double.parse(json['credit_limit'].toString())
+            : null,
+        status: json['status'] as int? ?? 1,
+        sortOrder: json['sort_order'] as int? ?? 0,
+        color: json['color'] as String? ?? '#1D9E75',
+        dueDay: json['due_day'] as int? ?? 0,
+        createdAt: DateTime.parse(json['created_at'] as String),
       );
 
   Map<String, dynamic> toJson() => {
-        'id':             id,
-        'userid':         userid,
-        'name':           name,
-        'wallet_type':    walletType.nameKey,
-        'currency':       currency,
-        'balance':        balance,
+        'id': id,
+        'userid': userid,
+        'name': name,
+        'wallet_type': walletType.nameKey,
+        'currency': currency,
+        'balance': balance,
         'account_number': accountNumber,
-        'bank_name':      bankName,
-        'credit_limit':   creditLimit,
-        'status':         status,
-        'sort_order':     sortOrder,
-        'color':          color,
-        'created_at':     createdAt.toIso8601String(),
+        'bank_name': bankName,
+        'credit_limit': creditLimit,
+        'status': status,
+        'sort_order': sortOrder,
+        'color': color,
+        'created_at': createdAt.toIso8601String(),
       };
 
   // toJson chỉ gửi các field user có thể thay đổi khi create/update
   Map<String, dynamic> toCreateJson() => {
-        'name':           name,
-        'wallet_type':    walletType.nameKey,
-        'currency':       currency,
+        'name': name,
+        'wallet_type': walletType.nameKey,
+        'currency': currency,
         'account_number': accountNumber,
-        'bank_name':      bankName,
-        'credit_limit':   creditLimit,
-        'sort_order':     sortOrder,
-        'color':          color,
+        'bank_name': bankName,
+        'credit_limit': creditLimit,
+        'sort_order': sortOrder,
+        'color': color,
+        'due_day': dueDay,
       };
 
   // copyWith — dùng khi update local state mà không mutate object gốc
@@ -110,27 +113,28 @@ class WalletModel {
     int? status,
     int? sortOrder,
     String? color,
+    int? dueDay,
     DateTime? createdAt,
   }) =>
       WalletModel(
-        id:            id            ?? this.id,
-        userid:        userid        ?? this.userid,
-        name:          name          ?? this.name,
-        walletType:    walletType    ?? this.walletType,
-        currency:      currency      ?? this.currency,
-        balance:       balance       ?? this.balance,
+        id: id ?? this.id,
+        userid: userid ?? this.userid,
+        name: name ?? this.name,
+        walletType: walletType ?? this.walletType,
+        currency: currency ?? this.currency,
+        balance: balance ?? this.balance,
         accountNumber: accountNumber ?? this.accountNumber,
-        bankName:      bankName      ?? this.bankName,
-        creditLimit:   creditLimit   ?? this.creditLimit,
-        status:        status        ?? this.status,
-        sortOrder:     sortOrder     ?? this.sortOrder,
-        color:         color         ?? this.color,
-        createdAt:     createdAt     ?? this.createdAt,
+        bankName: bankName ?? this.bankName,
+        creditLimit: creditLimit ?? this.creditLimit,
+        status: status ?? this.status,
+        sortOrder: sortOrder ?? this.sortOrder,
+        color: color ?? this.color,
+        dueDay: dueDay ?? this.dueDay,
+        createdAt: createdAt ?? this.createdAt,
       );
 
   @override
-  bool operator ==(Object other) =>
-      other is WalletModel && other.id == id;
+  bool operator ==(Object other) => other is WalletModel && other.id == id;
 
   @override
   int get hashCode => id.hashCode;

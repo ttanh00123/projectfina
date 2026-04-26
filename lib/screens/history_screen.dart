@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:taexpense/utils/app_settings.dart';
 import '../services/transaction_service.dart';
 import '../session.dart';
 import '../theme/app_theme.dart';
@@ -133,7 +134,12 @@ class _TxnTile extends StatelessWidget {
     final address = txn['address'];
     final note = txn['note'];
 
-    final amtFmt = NumberFormat('#,##0', 'vi_VN').format(amount);
+    // final amtFmt = NumberFormat('#,##0', 'vi_VN').format(amount);
+    final amtFmt = NumberFormat.currency(
+      locale: AppSettings.locale,
+      symbol: AppSettings.currency == 'VND' ? '₫' : AppSettings.currency,
+      decimalDigits: AppSettings.currency == 'VND' ? 0 : 2,
+    ).format(amount);
 
     DateTime? dt;
     try {

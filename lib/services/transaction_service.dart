@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:taexpense/app_constants.dart';
+import 'package:taexpense/services/settings_service.dart';
 
 class ApiException implements Exception {
   final String message;
@@ -16,18 +17,17 @@ class ApiException implements Exception {
 
 // ── Headers ───────────────────────────────────────────────────────────────────
 
-Map<String, String> _authHeaders(String token) {
-  final locale = Intl.getCurrentLocale();
-  final lang = locale.split('_')[0];
+Future<Map<String, String>> _authHeaders(String token) async {
+  final locale = await SettingsService.getLocale();
 
   return {
     'Authorization': 'Bearer $token',
     'Content-Type': 'application/json',
-    'Accept-Language': lang,
+    'Accept-Language': locale,
   };
 }
 
-String _extractError(http.Response r) {
+Future<String> _extractError(http.Response r) async {
   try {
     final body = jsonDecode(r.body);
     return body['detail'] as String? ?? 'Lỗi không xác định';
@@ -44,14 +44,14 @@ Future<Map<String, dynamic>> saveTransaction(
 ) async {
   final r = await http.post(
     Uri.parse('${AppConstants.BASE_URL}/transactions'),
-    headers: _authHeaders(token),
+    headers: await _authHeaders(token),
     body: jsonEncode(data),
   ).timeout(const Duration(seconds: 15));
 
   if (r.statusCode == 201 || r.statusCode == 200) {
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
-  throw ApiException(_extractError(r), statusCode: r.statusCode);
+  throw ApiException(await _extractError(r), statusCode: r.statusCode);
 }
 
 // ── Get transactions ──────────────────────────────────────────────────────────
@@ -79,13 +79,13 @@ Future<List<Map<String, dynamic>>> getTransactions(
   final r = await http.get(
     Uri.parse('${AppConstants.BASE_URL}/transactions')
         .replace(queryParameters: params),
-    headers: _authHeaders(token),
+    headers: await _authHeaders(token),
   ).timeout(const Duration(seconds: 15));
 
   if (r.statusCode == 200) {
     return (jsonDecode(r.body) as List).cast<Map<String, dynamic>>();
   }
-  throw ApiException(_extractError(r), statusCode: r.statusCode);
+  throw ApiException(await _extractError(r), statusCode: r.statusCode);
 }
 
 // ── Update transaction ────────────────────────────────────────────────────────
@@ -97,14 +97,14 @@ Future<Map<String, dynamic>> updateTransaction(
 ) async {
   final r = await http.put(
     Uri.parse('${AppConstants.BASE_URL}/transactions/$id'),
-    headers: _authHeaders(token),
+    headers: await _authHeaders(token),
     body: jsonEncode(data),
   ).timeout(const Duration(seconds: 15));
 
   if (r.statusCode == 200) {
     return jsonDecode(r.body) as Map<String, dynamic>;
   }
-  throw ApiException(_extractError(r), statusCode: r.statusCode);
+  throw ApiException(await _extractError(r), statusCode: r.statusCode);
 }
 
 // ── Delete transaction ────────────────────────────────────────────────────────
@@ -112,10 +112,10 @@ Future<Map<String, dynamic>> updateTransaction(
 Future<void> deleteTransaction(int id, String token) async {
   final r = await http.delete(
     Uri.parse('${AppConstants.BASE_URL}/transactions/$id'),
-    headers: _authHeaders(token),
+    headers: await _authHeaders(token),
   ).timeout(const Duration(seconds: 15));
 
   if (r.statusCode != 200 && r.statusCode != 204) {
-    throw ApiException(_extractError(r), statusCode: r.statusCode);
+    throw ApiException(await _extractError(r), statusCode: r.statusCode);
   }
 }
