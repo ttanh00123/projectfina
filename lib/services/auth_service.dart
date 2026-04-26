@@ -12,6 +12,7 @@ import 'package:taexpense/app_constants.dart';
 import 'package:taexpense/models/request_result.dart';
 import 'package:taexpense/models/user_model.dart';
 import 'package:taexpense/services/auth_storage.dart';
+import 'package:taexpense/services/master_data_store.dart';
 import 'package:taexpense/session.dart';
 import 'package:taexpense/utils/utils.dart';
 
@@ -66,6 +67,10 @@ Future<UserModel?> loginWithToken() async {
       if (ok) {
         UserModel user = UserModel.fromJson(userData['user']);
         await AuthStorage.saveSession(token, user);
+        
+        var _locale = 'vi';
+        await MasterDataStore().sync(token, locale: _locale);
+
         //If no FCM Token available? update it
         updateFCMTokenIfNeeded(user);
 
