@@ -368,7 +368,7 @@ class _InputBar extends StatelessWidget {
                 color: kError.withOpacity(0.08 + micAnim.value * 0.07),
                 borderRadius: BorderRadius.circular(20)),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.mic, color: kError, size: 16),
+                const Icon(Icons.mic, color: kError, size: 16),
                 const SizedBox(width: 6),
                 Text('Đang nghe...', style: GoogleFonts.dmSans(
                   color: kError, fontWeight: FontWeight.w600, fontSize: 13)),

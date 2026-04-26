@@ -113,23 +113,33 @@ class FinaField extends StatelessWidget {
 // ── Dropdown Field ────────────────────────────────────────────────────────────
 class FinaDropdown<T> extends StatelessWidget {
   final String label;
-  final T value;
+  final T? value;          // thêm ? ở đây
   final List<DropdownMenuItem<T>> items;
   final ValueChanged<T?> onChanged;
-  const FinaDropdown({super.key, required this.label, required this.value,
-    required this.items, required this.onChanged});
+
+  const FinaDropdown({
+    super.key,
+    required this.label,
+    this.value,            // không cần required nữa
+    required this.items,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Text(label, style: GoogleFonts.dmSans(
-        fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF374151))),
+          fontSize: 13, fontWeight: FontWeight.w600,
+          color: const Color(0xFF374151))),
       const SizedBox(height: 6),
       DropdownButtonFormField<T>(
-        value: value, items: items, onChanged: onChanged,
+        value: value,       // nullable ổn với DropdownButtonFormField
+        items: items,
+        onChanged: onChanged,
         style: GoogleFonts.dmSans(fontSize: 15, color: kText),
-        dropdownColor: Colors.white, borderRadius: BorderRadius.circular(12),
+        dropdownColor: Colors.white,
+        borderRadius: BorderRadius.circular(12),
         icon: const Icon(Icons.keyboard_arrow_down_rounded, color: kSubtext),
         decoration: const InputDecoration(),
       ),

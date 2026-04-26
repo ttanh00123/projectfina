@@ -31,22 +31,38 @@ class _CalculatorSheetState extends State<CalculatorSheet> {
     setState(() {
       const ops = ['+', '-', '×', '÷'];
       final last = _expr.isEmpty ? '' : _expr[_expr.length - 1];
+
       if (ops.contains(c) && ops.contains(last)) {
         _expr = _expr.substring(0, _expr.length - 1) + c;
+      } else if (c == '.') {
+        final currentNum = _expr.split(RegExp(r'[+\-×÷()]')).last;
+        if (currentNum.contains('.')) return;
+        _expr += c;
       } else {
         _expr += c;
       }
+
       _exprLabel = _expr;
-      _display = _tryEval(_expr) ?? _expr;
+      // Display: format kết quả nếu eval được, không thì hiện expr thô
+      final evaled = _tryEval(_expr);
+      _display = evaled != null ? _formatDisplay(evaled) : _expr;
     });
   }
 
-  void _delete() {
+  void _inputTripleZero() {
     setState(() {
-      if (_expr.isEmpty) return;
-      _expr = _expr.substring(0, _expr.length - 1);
+      const ops = ['+', '-', '×', '÷', '('];
+      final last = _expr.isEmpty ? '' : _expr[_expr.length - 1];
+      if (_expr.isEmpty || ops.contains(last)) {
+        _expr += '0';
+      } else if (_expr.endsWith('.')) {
+        _expr += '00';
+      } else {
+        _expr += '000';
+      }
       _exprLabel = _expr;
-      _display = _expr.isEmpty ? '0' : (_tryEval(_expr) ?? _expr);
+      final evaled = _tryEval(_expr);
+      _display = evaled != null ? _formatDisplay(evaled) : _expr;
     });
   }
 
@@ -55,8 +71,22 @@ class _CalculatorSheetState extends State<CalculatorSheet> {
     if (result == null) return;
     setState(() {
       _exprLabel = '$_expr =';
-      _expr = result;
-      _display = result;
+      _expr = result; // _expr giữ số thuần, không format
+      _display = _formatDisplay(result); // _display có dấu phẩy
+    });
+  }
+
+  void _delete() {
+    setState(() {
+      if (_expr.isEmpty) return;
+      _expr = _expr.substring(0, _expr.length - 1);
+      _exprLabel = _expr;
+      if (_expr.isEmpty) {
+        _display = '0';
+      } else {
+        final evaled = _tryEval(_expr);
+        _display = evaled != null ? _formatDisplay(evaled) : _expr;
+      }
     });
   }
 
@@ -86,7 +116,7 @@ class _CalculatorSheetState extends State<CalculatorSheet> {
       if (c == ')') depth++;
       if (c == '(') depth--;
       if (depth == 0 && (c == '+' || c == '-') && i > 0) {
-        final left  = _eval(s.substring(0, i));
+        final left = _eval(s.substring(0, i));
         final right = _eval(s.substring(i + 1));
         if (left == null || right == null) return null;
         return c == '+' ? left + right : left - right;
@@ -99,7 +129,7 @@ class _CalculatorSheetState extends State<CalculatorSheet> {
       if (c == ')') depth++;
       if (c == '(') depth--;
       if (depth == 0 && (c == '*' || c == '/') && i > 0) {
-        final left  = _eval(s.substring(0, i));
+        final left = _eval(s.substring(0, i));
         final right = _eval(s.substring(i + 1));
         if (left == null || right == null) return null;
         if (c == '/' && right == 0) return null;
@@ -111,6 +141,22 @@ class _CalculatorSheetState extends State<CalculatorSheet> {
       return _eval(s.substring(1, s.length - 1));
     }
     return double.tryParse(s);
+  }
+
+  // Trong _CalculatorSheetState
+
+  String _formatDisplay(String evalResult) {
+    // Tách phần nguyên và thập phân
+    final parts = evalResult.split('.');
+    final intPart = parts[0];
+    final decPart = parts.length > 1 ? '.${parts[1]}' : '';
+
+    // Thêm dấu phẩy ngàn vào phần nguyên
+    final formatted = intPart.replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+$)'),
+      (m) => '${m[1]},',
+    );
+    return '$formatted$decPart';
   }
 
   void _confirm() {
@@ -126,7 +172,8 @@ class _CalculatorSheetState extends State<CalculatorSheet> {
         children: [
           // Handle
           Container(
-            width: 36, height: 4,
+            width: 36,
+            height: 4,
             margin: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
               color: Colors.grey.shade300,
@@ -143,14 +190,16 @@ class _CalculatorSheetState extends State<CalculatorSheet> {
                 Text(
                   _exprLabel,
                   style: GoogleFonts.dmSans(
-                    fontSize: 14, color: Colors.grey.shade400),
+                      fontSize: 14, color: Colors.grey.shade400),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   _display,
                   style: GoogleFonts.dmSans(
-                    fontSize: 38, fontWeight: FontWeight.w500,
-                    color: kText, letterSpacing: -1),
+                      fontSize: 38,
+                      fontWeight: FontWeight.w500,
+                      color: kText,
+                      letterSpacing: -1),
                 ),
               ],
             ),
@@ -163,10 +212,10 @@ class _CalculatorSheetState extends State<CalculatorSheet> {
             child: Column(
               children: [
                 _row([
-                  _CalcBtn('⌫',  _delete,    type: _BtnType.del),
-                  _CalcBtn('(',   () => _input('('),  type: _BtnType.op),
-                  _CalcBtn(')',   () => _input(')'),  type: _BtnType.op),
-                  _CalcBtn('÷',   () => _input('÷'),  type: _BtnType.op),
+                  _CalcBtn('⌫', _delete, type: _BtnType.del),
+                  _CalcBtn('(', () => _input('('), type: _BtnType.op),
+                  _CalcBtn(')', () => _input(')'), type: _BtnType.op),
+                  _CalcBtn('÷', () => _input('÷'), type: _BtnType.op),
                 ]),
                 _row([
                   _CalcBtn('7', () => _input('7')),
@@ -187,7 +236,8 @@ class _CalculatorSheetState extends State<CalculatorSheet> {
                   _CalcBtn('+', () => _input('+'), type: _BtnType.op),
                 ]),
                 _row([
-                  _CalcBtn('0', () => _input('0'), flex: 2),
+                  _CalcBtn('0', () => _input('0')),
+                  _CalcBtn('000', () => _inputTripleZero()),
                   _CalcBtn('.', () => _input('.')),
                   _CalcBtn('=', _equals, type: _BtnType.eq),
                 ]),
@@ -198,7 +248,8 @@ class _CalculatorSheetState extends State<CalculatorSheet> {
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
             child: SizedBox(
-              width: double.infinity, height: 52,
+              width: double.infinity,
+              height: 52,
               child: ElevatedButton(
                 onPressed: _confirm,
                 style: ElevatedButton.styleFrom(
@@ -208,7 +259,8 @@ class _CalculatorSheetState extends State<CalculatorSheet> {
                 ),
                 child: Text('OK — Dán kết quả',
                     style: GoogleFonts.dmSans(
-                        fontSize: 16, fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                         color: Colors.white)),
               ),
             ),
@@ -219,17 +271,19 @@ class _CalculatorSheetState extends State<CalculatorSheet> {
   }
 
   Widget _row(List<_CalcBtn> btns) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Row(
-      children: btns.map((b) => Expanded(
-        flex: b.flex,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: _buildBtn(b),
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          children: btns
+              .map((b) => Expanded(
+                    flex: b.flex,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: _buildBtn(b),
+                    ),
+                  ))
+              .toList(),
         ),
-      )).toList(),
-    ),
-  );
+      );
 
   Widget _buildBtn(_CalcBtn b) {
     Color bg;
@@ -260,12 +314,14 @@ class _CalculatorSheetState extends State<CalculatorSheet> {
           foregroundColor: fg,
           elevation: 0,
           shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
         child: Text(b.label,
             style: GoogleFonts.dmSans(
-                fontSize: 22, fontWeight: FontWeight.w500, color: fg)),
+                fontSize: b.label == '000' ? 18 : 22,
+                fontWeight: FontWeight.w500,
+                color: fg)),
       ),
     );
   }

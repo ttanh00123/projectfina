@@ -11,6 +11,7 @@ const kBorder    = Color(0xFFE5E7EB);
 const kError     = Color(0xFFEF4444);
 const kIncome    = Color(0xFF059669);
 const kExpense   = Color(0xFFDC2626);
+const kTransfer  = Color(0xFF2563EB);
 
 ThemeData buildTheme() => ThemeData(
   useMaterial3: true,

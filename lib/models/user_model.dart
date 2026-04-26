@@ -1,14 +1,14 @@
 class UserModel {
   int? id;
   String? email;
-  Null? passwordHash;
+  String? passwordHash;
   String? displayName;
   String? birthDate;
   String? gender;
   String? address;
   String? avatar;
   String? fcmToken;
-  String? status;
+  int? status;
 
   UserModel(
       {this.id,

@@ -1,136 +1,248 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import 'package:taexpense/app_constants.dart';
+import 'package:taexpense/models/category.dart';
 import 'package:taexpense/models/transaction_data.dart';
+import 'package:taexpense/models/wallet_model.dart';
+import 'package:taexpense/services/bill_upload_service.dart';
+import 'package:taexpense/services/master_data_store.dart';
 import 'package:taexpense/services/transaction_service.dart' as TransactionService;
 import 'package:taexpense/session.dart';
 import 'package:taexpense/utils/utils.dart';
+import 'package:taexpense/widgets/bill_image_picker.dart';
 import 'package:taexpense/widgets/calculator_sheet.dart';
-// import '../models/user.dart';
-// import '../services/api_service.dart';
-// import '../services/auth_provider.dart';
+import 'package:taexpense/widgets/tags_input_field.dart';
 import '../theme/app_theme.dart';
-// import '../utils/constants.dart';
 import '../widgets/fina_widgets.dart';
+import 'package:taexpense/utils/material_icons_map.dart';
+
 
 class CreateTransactionScreen extends StatefulWidget {
   final TransactionData? prefill;
   const CreateTransactionScreen({super.key, this.prefill});
-  @override State<CreateTransactionScreen> createState() => _CreateTransactionScreenState();
+
+  @override
+  State<CreateTransactionScreen> createState() =>
+      _CreateTransactionScreenState();
 }
 
 class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
-  final _form    = GlobalKey<FormState>();
-  final _amount  = TextEditingController();
-  final _address = TextEditingController();
-  final _note    = TextEditingController();
+  final _formKey          = GlobalKey<FormState>();
+  final _amountCtrl       = TextEditingController();
+  final _receiveAmountCtrl = TextEditingController();
+  final _addressCtrl      = TextEditingController();
+  final _noteCtrl         = TextEditingController();
 
-  String _type     = 'expense';
-  String _currency = 'VND';
-  String _wallet   = 'Cash';
-  String _category = 'Food & Drinks';
-  DateTime _dt     = DateTime.now();
-  String? _requestId;
+  int          _type     = 0;   // 0=expense 1=income 2=transfer
+  String get _currency => _fromWallet?.currency ?? 'VND';
+  // Các đồng tiền không dùng số thập phân
+  bool get _isIntegerCurrency => ['VND', 'JPY', 'KRW', 'IDR'].contains(_currency);
 
-  bool _saving = false;
-  String? _error;
+  DateTime     _dt       = DateTime.now();
+  List<String> _tags     = [];
+  List<File>   _billImages = [];
+  String?      _requestId;
+  bool         _saving   = false;
+  String?      _error;
+
+  // Master data — load từ MasterDataStore (đã sync lúc login)
+  List<WalletModel>   get _wallets    => MasterDataStore().wallets;
+  List<Category> get _categories => MasterDataStore().categories;
+
+  WalletModel?   _fromWallet;
+  WalletModel?   _toWallet;
+  Category? _category;
+
+  List<String> get _tagSuggestions =>
+      MasterDataStore().recentTags; // optional: lưu tags hay dùng
+
+  bool get _isTransfer => _type == 2;
+
+  // Categories lọc theo type hiện tại
+  List<Category> get _filteredCategories => _categories
+      .where((c) => c.type == _type || c.type == 2)
+      .toList();
 
   @override
   void initState() {
     super.initState();
+
+    // Default wallet = ví đầu tiên
+    _fromWallet = _wallets.isNotEmpty ? _wallets.first : null;
+
+    // Default category = expense đầu tiên
+    _category = _filteredCategories.isNotEmpty
+        ? _filteredCategories.first
+        : null;
+
+    // Prefill từ AI parser
     final p = widget.prefill;
     if (p != null) {
-      _type       = p.type;
-      _currency   = p.currency;
-      _wallet     = _capitalise(p.wallet);
-      _category   = p.category;
-      _requestId  = p.requestId;
-      _amount.text = p.amount.toStringAsFixed(p.amount % 1 == 0 ? 0 : 2);
-      if (p.address != null) _address.text = p.address!;
-      if (p.note != null) _note.text = p.note!;
-      try { _dt = DateTime.parse(p.dateTime).toLocal(); } catch (_) {}
+      _type     = p.type;
+      // _currency = p.currency;  // Lưu ý: currency sẽ theo wallet đã chọn, nên không set trực tiếp được
+      _requestId = p.requestId;
+      _amountCtrl.text =
+          p.amount.toStringAsFixed(p.amount % 1 == 0 ? 0 : 2);
+      if (p.address != null) _addressCtrl.text = p.address!;
+      if (p.note    != null) _noteCtrl.text    = p.note!;
+
+      // Resolve wallet từ prefill
+      if (p.wallet != null) {
+        _fromWallet = _wallets
+            .where((w) => w.id == p.wallet!.id)
+            .firstOrNull ?? _fromWallet;
+      }
+
+      // Resolve category từ prefill
+      if (p.category != null) {
+        _category = _filteredCategories
+            .where((c) => c.id == p.category)
+            .firstOrNull ?? _category;
+      }
+
+      try {
+        _dt = DateTime.parse(p.dateTime).toLocal();
+      } catch (_) {}
     }
-    // Ensure wallet matches list
-    if (!kWallets.contains(_wallet)) _wallet = kWallets.first;
-    if (!kCategories.contains(_category)) _category = kCategories.first;
   }
 
-  String _capitalise(String s) =>
-    s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
-
   @override
-  void dispose() { _amount.dispose(); _address.dispose(); _note.dispose(); super.dispose(); }
+  void dispose() {
+    _amountCtrl.dispose();
+    _receiveAmountCtrl.dispose();
+    _addressCtrl.dispose();
+    _noteCtrl.dispose();
+    super.dispose();
+  }
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
 
   Future<void> _pickDateTime() async {
     final date = await showDatePicker(
       context: context,
       initialDate: _dt,
-      firstDate: DateTime(2000), lastDate: DateTime(2100),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
       builder: (ctx, child) => Theme(
-        data: ThemeData.light().copyWith(colorScheme: const ColorScheme.light(primary: kPrimary)),
-        child: child!),
+        data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(primary: kPrimary)),
+        child: child!,
+      ),
     );
     if (date == null || !mounted) return;
-    final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(_dt),
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_dt),
       builder: (ctx, child) => Theme(
-        data: ThemeData.light().copyWith(colorScheme: const ColorScheme.light(primary: kPrimary)),
-        child: child!));
+        data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(primary: kPrimary)),
+        child: child!,
+      ),
+    );
     if (time == null) return;
-    setState(() => _dt = DateTime(date.year, date.month, date.day, time.hour, time.minute));
+    setState(() => _dt =
+        DateTime(date.year, date.month, date.day, time.hour, time.minute));
   }
 
   Future<void> _save() async {
-    if (!_form.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) return;
+    if (_fromWallet == null) {
+      setState(() => _error = 'Vui lòng chọn ví');
+      return;
+    }
+    if (_isTransfer && _toWallet == null) {
+      setState(() => _error = 'Vui lòng chọn ví đích');
+      return;
+    }
+
     setState(() { _saving = true; _error = null; });
 
-    // final auth = context.read<AuthProvider>();
     try {
+      // 1. Upload bill images lên temp
+      final tempKeys = <String>[];
+      for (final file in _billImages) {
+        final key = await BillUploadService.uploadTemp(file, Session.token!);
+        tempKeys.add(key);
+      }
+
+      // 2. Build payload và gọi API lưu giao dịch
+      final rawAmount = NumberFormat('#,##0.##', 'vi_VN')
+          .parse(_amountCtrl.text.isEmpty ? '0' : _amountCtrl.text)
+          .toDouble();
+
+      final rawReceive = _isTransfer && _receiveAmountCtrl.text.isNotEmpty
+          ? NumberFormat('#,##0.##', 'vi_VN')
+              .parse(_receiveAmountCtrl.text)
+              .toDouble()
+          : null;
+
       await TransactionService.saveTransaction({
-        'type': _type,
-        'amount': double.parse(_amount.text.replaceAll(',', '')),
-        'currency': _currency,
-        'wallet': _wallet.toLowerCase(),
-        'address': _address.text.trim().isEmpty ? null : _address.text.trim(),
-        'category': _category,
-        'note': _note.text.trim().isEmpty ? null : _note.text.trim(),
-        'date_time': _dt.toUtc().toIso8601String(),
-        'request_id': _requestId,
+        'type':            _type,
+        'wallet_id':       _fromWallet!.id,
+        'to_wallet_id':    _isTransfer ? _toWallet?.id : null,
+        'amount':          rawAmount,
+        'receive_amount':  rawReceive,
+        'currency':        _currency,
+        'category_id':     _isTransfer ? null : _category?.id,
+        'address':         _addressCtrl.text.trim().isEmpty
+                               ? null : _addressCtrl.text.trim(),
+        'note':            _noteCtrl.text.trim().isEmpty
+                               ? null : _noteCtrl.text.trim(),
+        'date_time':       _dt.toUtc().toIso8601String(),
+        'tags':            _tags.isEmpty ? null : _tags.join(','),
+        'temp_bill_keys':  tempKeys,
+        'request_id':      _requestId,
       }, Session.token!);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Transaction saved!', style: GoogleFonts.dmSans(fontWeight: FontWeight.w600)),
-          backgroundColor: kPrimary, behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))));
+          content: Text('Đã lưu giao dịch',
+              style: GoogleFonts.dmSans(fontWeight: FontWeight.w600)),
+          backgroundColor: kPrimary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10)),
+        ));
         Navigator.pop(context);
-        Navigator.pop(context); // go back past chat
       }
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } catch (_) {
-      setState(() => _error = 'Cannot connect to server.');
+      setState(() => _error = 'Không thể kết nối server.');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 
+  // ── Build ──────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: kBg,
     appBar: AppBar(
-      title: const Text('New Transaction'),
-      backgroundColor: Colors.white, elevation: 0,
+      backgroundColor: Colors.white,
+      elevation: 0,
       leading: IconButton(
         icon: const Icon(Icons.close_rounded, color: kText),
-        onPressed: () => Navigator.pop(context)),
+        onPressed: () => Navigator.pop(context),
+      ),
+      title: Text('New Transaction',
+          style: GoogleFonts.spaceGrotesk(
+              fontWeight: FontWeight.w700, color: kText)),
       actions: [
-        TextButton(
-          onPressed: _saving ? null : _save,
-          child: Text('Save', style: GoogleFonts.dmSans(
-            color: kPrimary, fontWeight: FontWeight.w700, fontSize: 15)),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _amountCtrl,
+          builder: (_, val, __) => TextButton(
+            onPressed: (_saving || val.text.isEmpty) ? null : _save,
+            child: Text('Save',
+                style: GoogleFonts.dmSans(
+                    color: kPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15)),
+          ),
         ),
       ],
     ),
@@ -138,164 +250,304 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
-          key: _form,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            if (_error != null) ...[ErrorBanner(message: _error!), const SizedBox(height: 16)],
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
 
-            // Type toggle
-            _TypeToggle(value: _type, onChanged: (v) => setState(() => _type = v)),
-            const SizedBox(height: 20),
+              // Error banner
+              if (_error != null) ...[
+                ErrorBanner(message: _error!),
+                const SizedBox(height: 16),
+              ],
 
-            // Amount + Currency row
-            Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Expanded(flex: 3, child: _AmountField(controller: _amount)),
-              const SizedBox(width: 12),
-              Expanded(flex: 2, child: FinaDropdown<String>(
-                label: 'Currency', value: _currency,
-                items: kCurrencies.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                onChanged: (v) => setState(() => _currency = v ?? _currency),
-              )),
-            ]),
-            const SizedBox(height: 20),
+              // ── Type toggle ────────────────────────────────────────────────
+              _TypeToggle(
+                value: _type,
+                onChanged: (v) => setState(() {
+                  _type = v;
+                  // Reset category khi đổi type
+                  _category = _filteredCategories.isNotEmpty
+                      ? _filteredCategories.first : null;
+                }),
+              ),
+              const SizedBox(height: 20),
 
-            // Wallet
-            FinaDropdown<String>(
-              label: 'Wallet', value: _wallet,
-              items: kWallets.map((w) => DropdownMenuItem(value: w, child: Text(w))).toList(),
-              onChanged: (v) => setState(() => _wallet = v ?? _wallet),
-            ),
-            const SizedBox(height: 20),
+              // ── Amount + Currency ──────────────────────────────────────────
+              Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Expanded(
+                  flex: 3,
+                  child: _AmountField(
+                    controller: _amountCtrl,
+                    label: 'Số tiền',
+                    currency:   _currency,
+                    isInteger:  _isIntegerCurrency,
+                  ),
+                ),
+                
+              ]),
+              const SizedBox(height: 20),
 
-            // Address
-            FinaField(
-              label: 'Address / Merchant', hint: 'e.g. Highlands Coffee',
-              controller: _address,
-              prefix: const Icon(Icons.location_on_outlined, size: 20, color: kSubtext),
-            ),
-            const SizedBox(height: 20),
+              // ── Transfer: receive amount ───────────────────────────────────
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child: _isTransfer
+                    ? Column(children: [
+                        _AmountField(
+                          controller: _receiveAmountCtrl,
+                          label: 'Số tiền nhận',
+                        ),
+                        const SizedBox(height: 20),
+                      ])
+                    : const SizedBox.shrink(),
+              ),
 
-            // Date time picker
-            _DateTimeTile(dt: _dt, onTap: _pickDateTime),
-            const SizedBox(height: 20),
+              // ── From wallet ────────────────────────────────────────────────
+              FinaDropdown<WalletModel>(
+                label: _isTransfer ? 'Từ ví' : 'Ví',
+                value: _fromWallet,
+                items: _wallets.map((w) => DropdownMenuItem(
+                  value: w,
+                  child: Row(children: [
+                    Container(
+                      width: 10, height: 10,
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        color: _hexToColor(w.color),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    Text(w.name),
+                  ]),
+                )).toList(),
+                onChanged: (v) => setState(() => _fromWallet = v),
+              ),
+              const SizedBox(height: 20),
 
-            // Category
-            FinaDropdown<String>(
-              label: 'Category', value: _category,
-              items: kCategories.map((c) => DropdownMenuItem(value: c,
-                child: Text(c))).toList(),
-              onChanged: (v) => setState(() => _category = v ?? _category),
-            ),
-            const SizedBox(height: 20),
+              // ── To wallet (transfer only) ──────────────────────────────────
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child: _isTransfer
+                    ? Column(children: [
+                        FinaDropdown<WalletModel>(
+                          label: 'Tới ví',
+                          value: _toWallet,
+                          items: _wallets
+                              .where((w) => w.id != _fromWallet?.id)
+                              .map((w) => DropdownMenuItem(
+                                value: w,
+                                child: Row(children: [
+                                  Container(
+                                    width: 10, height: 10,
+                                    margin: const EdgeInsets.only(right: 8),
+                                    decoration: BoxDecoration(
+                                      color: _hexToColor(w.color),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  Text(w.name),
+                                ]),
+                              )).toList(),
+                          onChanged: (v) => setState(() => _toWallet = v),
+                        ),
+                        const SizedBox(height: 20),
+                      ])
+                    : const SizedBox.shrink(),
+              ),
 
-            // Note
-            FinaField(
-              label: 'Note (optional)', hint: 'Add a note...',
-              controller: _note,
-              prefix: const Icon(Icons.notes_rounded, size: 20, color: kSubtext),
-            ),
-            const SizedBox(height: 32),
+              // ── Category (expense + income only) ──────────────────────────
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child: !_isTransfer
+                    ? Column(children: [
+                        FinaDropdown<Category>(
+                          label: 'Danh mục',
+                          value: _category,
+                          items: _filteredCategories.map((c) => DropdownMenuItem(
+                            value: c,
+                            child: Row(children: [
+                              Container(
+                                width: 28, height: 28,
+                                decoration: BoxDecoration(
+                                  color: _categoryColor(c.type).withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Icon(
+                                  iconFromKey(c.icon),
+                                  size: 16,
+                                  color: _categoryColor(c.type),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(c.name),
+                            ]),
+                          )).toList(),
+                          onChanged: (v) => setState(() => _category = v),
+                        ),
+                        const SizedBox(height: 20),
+                      ])
+                    : const SizedBox.shrink(),
+              ),
 
-            FinaButton(label: _saving ? 'Saving...' : 'Save Transaction',
-              onPressed: _save, isLoading: _saving,
-              icon: Icons.save_rounded),
-            const SizedBox(height: 20),
-          ]),
+              // ── Address / Merchant (expense only) ─────────────────────────
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child: _type == 0
+                    ? Column(children: [
+                        FinaField(
+                          label: 'Địa điểm / Nơi bán',
+                          hint: 'Tên cửa hàng...',
+                          controller: _addressCtrl,
+                          prefix: const Icon(Icons.location_on_outlined,
+                              size: 20, color: kSubtext),
+                        ),
+                        const SizedBox(height: 20),
+                      ])
+                    : const SizedBox.shrink(),
+              ),
+
+              // ── Date & Time ────────────────────────────────────────────────
+              _DateTimeTile(dt: _dt, onTap: _pickDateTime),
+              const SizedBox(height: 20),
+
+              // ── Note ──────────────────────────────────────────────────────
+              FinaField(
+                label: 'Ghi chú',
+                hint: 'Thêm ghi chú...',
+                controller: _noteCtrl,
+                prefix: const Icon(Icons.notes_rounded,
+                    size: 20, color: kSubtext),
+              ),
+              const SizedBox(height: 20),
+
+              // ── Tags ───────────────────────────────────────────────────────
+              TagsInputField(
+                tags: _tags,
+                suggestions: _tagSuggestions,
+                onChanged: (t) => setState(() => _tags = t),
+              ),
+              const SizedBox(height: 20),
+
+              // ── Bill images ────────────────────────────────────────────────
+              BillImagePicker(
+                images: _billImages,
+                onChanged: (imgs) => setState(() => _billImages = imgs),
+              ),
+              const SizedBox(height: 24),
+
+              // ── Save button ────────────────────────────────────────────────
+              FinaButton(
+                label: 'Lưu giao dịch',
+                onPressed: _save,
+                isLoading: _saving,
+                icon: Icons.save_rounded,
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     ),
   );
 }
 
-// ── Type Toggle ───────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────────
+Color _categoryColor(int type) {
+  switch (type) {
+    case 1:  return kIncome;   // thu
+    case 0:  return kExpense;  // chi
+    default: return kPrimary;
+  }
+}
+
+Color _hexToColor(String? hex) {
+  final clean = (hex ?? '#1D9E75').replaceAll('#', '');
+  return Color(int.parse('FF$clean', radix: 16));
+}
+
+// ── Type Toggle ────────────────────────────────────────────────────────────────
+
 class _TypeToggle extends StatelessWidget {
-  final String value;
-  final ValueChanged<String> onChanged;
+  final int value;
+  final ValueChanged<int> onChanged;
   const _TypeToggle({required this.value, required this.onChanged});
 
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(4),
-    decoration: BoxDecoration(color: kBorder.withOpacity(0.4),
-      borderRadius: BorderRadius.circular(14)),
+    decoration: BoxDecoration(
+      color: kBorder.withOpacity(0.4),
+      borderRadius: BorderRadius.circular(14),
+    ),
     child: Row(children: [
-      _Toggle(label: 'Expense', val: 'expense', active: value == 'expense',
-        activeColor: kExpense, onTap: () => onChanged('expense')),
-      _Toggle(label: 'Income', val: 'income', active: value == 'income',
-        activeColor: kIncome, onTap: () => onChanged('income')),
+      _Tab(label: 'Chi',      val: 0, active: value == 0,
+           activeColor: kExpense,  onTap: () => onChanged(0)),
+      _Tab(label: 'Thu',      val: 1, active: value == 1,
+           activeColor: kIncome,   onTap: () => onChanged(1)),
+      _Tab(label: 'Chuyển',   val: 2, active: value == 2,
+           activeColor: kTransfer, onTap: () => onChanged(2)),
     ]),
   );
 }
 
-class _Toggle extends StatelessWidget {
-  final String label, val; final bool active;
-  final Color activeColor; final VoidCallback onTap;
-  const _Toggle({required this.label, required this.val, required this.active,
-    required this.activeColor, required this.onTap});
+class _Tab extends StatelessWidget {
+  final String label;
+  final int val;
+  final bool active;
+  final Color activeColor;
+  final VoidCallback onTap;
+  const _Tab({required this.label, required this.val, required this.active,
+      required this.activeColor, required this.onTap});
+
   @override
-  Widget build(BuildContext context) => Expanded(child: GestureDetector(
-    onTap: onTap,
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: active ? activeColor : Colors.transparent,
-        borderRadius: BorderRadius.circular(11)),
-      child: Text(label, textAlign: TextAlign.center,
-        style: GoogleFonts.dmSans(fontWeight: FontWeight.w700, fontSize: 14,
-          color: active ? Colors.white : kSubtext)),
+  Widget build(BuildContext context) => Expanded(
+    child: GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: active ? activeColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Text(label,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.dmSans(
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+            color: active ? Colors.white : kSubtext,
+          ),
+        ),
+      ),
     ),
-  ));
+  );
 }
 
-// ── Amount Field ──────────────────────────────────────────────────────────────
-// class _AmountField extends StatelessWidget {
-//   final TextEditingController controller;
-//   const _AmountField({required this.controller});
-//   @override
-//   Widget build(BuildContext context) => Column(
-//     crossAxisAlignment: CrossAxisAlignment.start,
-//     children: [
-//       Text('Amount', style: GoogleFonts.dmSans(
-//         fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF374151))),
-//       const SizedBox(height: 6),
-//       TextFormField(
-//         controller: controller,
-//         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-//         inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))],
-//         style: GoogleFonts.spaceGrotesk(fontSize: 20, fontWeight: FontWeight.w700, color: kText),
-//         validator: (v) {
-//           if (v == null || v.isEmpty) return 'Required';
-//           if (double.tryParse(v.replaceAll(',', '')) == null) return 'Invalid';
-//           return null;
-//         },
-//         decoration: InputDecoration(
-//           hintText: '0',
-//           hintStyle: GoogleFonts.spaceGrotesk(fontSize: 20, color: kBorder),
-//           prefixIcon: const Icon(Icons.attach_money_rounded, color: kSubtext, size: 20),
-//           filled: true, fillColor: const Color(0xFFF9FAFB),
-//           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-//           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-//             borderSide: const BorderSide(color: kBorder)),
-//           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-//             borderSide: const BorderSide(color: kBorder)),
-//           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-//             borderSide: const BorderSide(color: kPrimary, width: 2)),
-//           errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-//             borderSide: const BorderSide(color: kError)),
-//         ),
-//       ),
-//     ],
-//   );
-// }
-
-// Thay _AmountField bằng cái này trong create_transaction_screen.dart
+// ── Amount Field ───────────────────────────────────────────────────────────────
 
 class _AmountField extends StatelessWidget {
   final TextEditingController controller;
-  const _AmountField({required this.controller});
+  final String  label;
+  final String  currency;
+  final bool    isInteger;   // true = không thập phân (VND, JPY...)
+
+  const _AmountField({
+    required this.controller,
+    this.label     = 'Số tiền',
+    this.currency  = 'VND',
+    this.isInteger = true,
+  });
 
   Future<void> _openCalculator(BuildContext context) async {
-    final raw = controller.text.replaceAll(',', '');
+    final raw = controller.text
+        .replaceAll(RegExp(r'[,.](?=\d{3})'), '') // bỏ dấu ngàn
+        .replaceAll(',', '.')                       // phẩy thập phân → chấm
+        .trim();
+
     final result = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
@@ -305,12 +557,22 @@ class _AmountField extends StatelessWidget {
       ),
       builder: (_) => CalculatorSheet(initialValue: raw),
     );
+
     if (result != null) {
-      // Format số có dấu phẩy ngàn
       final val = double.tryParse(result);
       if (val != null) {
-        controller.text = NumberFormat('#,##0.##', 'vi_VN').format(val);
+        controller.text = _formatAmount(val);
       }
+    }
+  }
+
+  String _formatAmount(double val) {
+    if (isInteger) {
+      // VND: 1.500.000
+      return NumberFormat('#,##0', 'vi_VN').format(val.round());
+    } else {
+      // SGD, USD: 1,500.00
+      return NumberFormat('#,##0.00', 'en_US').format(val);
     }
   }
 
@@ -318,9 +580,10 @@ class _AmountField extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text('Amount', style: GoogleFonts.dmSans(
-        fontSize: 13, fontWeight: FontWeight.w600,
-        color: const Color(0xFF374151))),
+      Text(label,
+          style: GoogleFonts.dmSans(
+              fontSize: 13, fontWeight: FontWeight.w600,
+              color: const Color(0xFF374151))),
       const SizedBox(height: 6),
       ValueListenableBuilder<TextEditingValue>(
         valueListenable: controller,
@@ -328,6 +591,7 @@ class _AmountField extends StatelessWidget {
           onTap: () => _openCalculator(context),
           child: Container(
             height: 52,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
               color: const Color(0xFFF9FAFB),
               borderRadius: BorderRadius.circular(12),
@@ -336,26 +600,33 @@ class _AmountField extends StatelessWidget {
                 width: value.text.isEmpty ? 1 : 2,
               ),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                const Icon(Icons.attach_money_rounded,
-                    color: kSubtext, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    value.text.isEmpty ? '0' : value.text,
-                    style: GoogleFonts.spaceGrotesk(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: value.text.isEmpty ? kBorder : kText,
-                    ),
+            child: Row(children: [
+              // Currency badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: kPrimary.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(currency,
+                    style: GoogleFonts.dmSans(
+                        fontSize: 11, fontWeight: FontWeight.w600,
+                        color: kPrimary)),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  value.text.isEmpty ? (isInteger ? '0' : '0.00') : value.text,
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: value.text.isEmpty ? kBorder : kText,
                   ),
                 ),
-                Icon(Icons.calculate_outlined,
-                    size: 18, color: kPrimary.withOpacity(0.6)),
-              ],
-            ),
+              ),
+              Icon(Icons.calculate_outlined,
+                  size: 18, color: kPrimary.withOpacity(0.6)),
+            ]),
           ),
         ),
       ),
@@ -363,29 +634,38 @@ class _AmountField extends StatelessWidget {
   );
 }
 
-// ── DateTime Tile ─────────────────────────────────────────────────────────────
+// ── DateTime Tile ──────────────────────────────────────────────────────────────
+
 class _DateTimeTile extends StatelessWidget {
-  final DateTime dt; final VoidCallback onTap;
+  final DateTime dt;
+  final VoidCallback onTap;
   const _DateTimeTile({required this.dt, required this.onTap});
+
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text('Date & Time', style: GoogleFonts.dmSans(
-        fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF374151))),
+      Text('Ngày & Giờ',
+          style: GoogleFonts.dmSans(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF374151))),
       const SizedBox(height: 6),
       GestureDetector(
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: kBorder)),
+            color: const Color(0xFFF9FAFB),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: kBorder),
+          ),
           child: Row(children: [
-            const Icon(Icons.calendar_month_rounded, color: kSubtext, size: 20),
+            const Icon(Icons.calendar_month_rounded,
+                color: kSubtext, size: 20),
             const SizedBox(width: 12),
             Text(DateFormat('HH:mm, dd MMM yyyy').format(dt),
-              style: GoogleFonts.dmSans(fontSize: 15, color: kText)),
+                style: GoogleFonts.dmSans(fontSize: 15, color: kText)),
             const Spacer(),
             const Icon(Icons.edit_outlined, color: kSubtext, size: 16),
           ]),

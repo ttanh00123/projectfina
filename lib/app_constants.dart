@@ -1,12 +1,11 @@
 // ignore_for_file: constant_identifier_names, non_constant_identifier_names
 
-import 'package:taexpense/models/user_model.dart';
 
 class AppConstants {
   // static UserModel? LOGIN_USER;
   // static String? API_TOKEN;
   
-  static const String BASE_URL = "http://api.conaudio.vn:8000";
+  static const String BASE_URL = "http://fina.carmedia.top";
 
   //AUTH
   static const String LOGIN_API = "$BASE_URL/auth/login";

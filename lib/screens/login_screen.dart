@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:taexpense/models/user_model.dart';
@@ -81,10 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           prefixIcon: const Icon(Icons.mail_outline_rounded, size: 14),
                           filled: true,
                           fillColor: Colors.grey[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(50),
-                            borderSide: BorderSide.none,
-                          ),
+                          
                           contentPadding:
                               const EdgeInsets.symmetric(vertical: 16),
                         ),
@@ -110,10 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           filled: true,
                           fillColor: Colors.grey[50],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(50),
-                            borderSide: BorderSide.none,
-                          ),
+                          
                           contentPadding:
                               const EdgeInsets.symmetric(vertical: 16),
                         ),
@@ -135,92 +132,40 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
-                      // const SizedBox(height: 24),
-      
-                      // Login Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 55,
-                        child: ElevatedButton(
-                            onPressed: () async {
-                              setState(() {
-                                  message = '';  
-                              });
-      
-                              final email = _emailController.text.trim();
-                              final password = _passwordController.text.trim();
-      
-                              if (email.isEmpty || password.isEmpty) {
-                                // ScaffoldMessenger.of(context).showSnackBar(
-                                //   const SnackBar(
-                                //       content: Text(
-                                //           'Vui lòng nhập đầy đủ email và mật khẩu')),
-                                // );
-                                setState(() {
-                                  message = 'Vui lòng nhập đầy đủ email và mật khẩu';  
-                                });
-                                
-                                return;
-                              }
-      
-                              await doLogin(context, email, password);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: kPrimary,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(50),
-                              ),
-                              elevation: 5,
-                              shadowColor: kPrimary.withOpacity(0.4),
-                            ),
-                            child: _isLoading
-                                ? const CircularProgressIndicator(
-                                    color: Colors.white,
-                                  )
-                                : const Text(
-                                    'ĐĂNG NHẬP',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 1.2,
-                                    ),
-                                  )),
+                      
+                      FinaButton(
+                        label: 'Đăng nhập',
+                        isLoading: _isLoading,
+                        onPressed: _handleLogin,
                       ),
+                      
+                      const SizedBox(height: 24),
+                      const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text(
+                          'Bạn chưa có tài khoản? ',
+                          style: TextStyle(color: kSubtext),
+                        ),
+                      ),
+                      FinaButton(
+                        label: 'Đăng ký ngay',
+                        color: Colors.redAccent,
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SignupScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      // Login Button
+                      
                     ],
                   ),
                 ),
                 const SizedBox(height: 32),
       
-                // Signup Link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Chưa có tài khoản? ',
-                      style: TextStyle(color: kSubtext),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        // Chuyển hướng trang đăng ký
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SignupScreen(),
-                          ),
-                        );
-                      },
-                      child: const Text(
-                        'Đăng ký ngay',
-                        style: TextStyle(
-                          color: kPrimary,
-                          fontWeight: FontWeight.bold,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
@@ -229,36 +174,63 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
   
-  doLogin(BuildContext context, String email, String password) async{
-    // Hiển thị trạng thái loading
-      setState(() => _isLoading = true);
+  Future<void> _handleLogin() async {
+    // setState(() => _isLoading = true);
 
-      UserModel? loginUser = await loginWithPassword(context, email, password);
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      setState(() {
+        message = 'Vui lòng nhập đầy đủ email và mật khẩu';  
+      });
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    await doLogin(context, email, password);
+  }  
+
+  doLogin(BuildContext context, String email, String password) async {
+    setState(() => _isLoading = true);
+
+    try {
+      UserModel? loginUser = await loginWithPassword(context, email, password)
+          .timeout(const Duration(seconds: 10));  // explicit timeout
+
       if (loginUser != null) {
         if (context.mounted) {
-          Navigator.pushReplacementNamed(
-              context, HomeScreen.routeName);
+          Navigator.pushReplacementNamed(context, HomeScreen.routeName);
         }
       } else {
-        if (context.mounted) {
-          showDialog(
-              context: context,
-              builder: (_) => AlertDialog(
-                title: const Text("Thông báo"),
-                content: const Text("Đăng nhập không thành công. Vui lòng kiểm tra lại email và mật khẩu."),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text("OK"),
-                  ),
-                ],
-              ),
-            );
-        }
-
-        // Hiển thị trạng thái loading
-        setState(() => _isLoading = false);
-        
+        _showError('Đăng nhập không thành công. Vui lòng kiểm tra lại.');
       }
+    } on TimeoutException {
+      _showError('Kết nối quá chậm, thử lại sau.');
+    } on SocketException {
+      _showError('Không thể kết nối server. Kiểm tra mạng.');
+    } catch (e) {
+      _showError('Lỗi: $e');   // in ra lỗi thật sự
+      debugPrint('doLogin error: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showError(String msg) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Thông báo'),
+        content: Text(msg),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 }

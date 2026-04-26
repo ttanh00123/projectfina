@@ -3,7 +3,7 @@ import 'package:taexpense/constants/wallet_types.dart';
 import 'package:taexpense/models/wallet_type.dart';
 
 
-class Wallet {
+class WalletModel {
   final int id;
   final int userid;
   final String name;
@@ -18,7 +18,7 @@ class Wallet {
   final String color;
   final DateTime createdAt;
 
-  const Wallet({
+  const WalletModel({
     required this.id,
     required this.userid,
     required this.name,
@@ -50,7 +50,7 @@ class Wallet {
 
   // --- Serialization ---
 
-  factory Wallet.fromJson(Map<String, dynamic> json) => Wallet(
+  factory WalletModel.fromJson(Map<String, dynamic> json) => WalletModel(
         id:            json['id'] as int,
         userid:        json['userid'] as int,
         name:          json['name'] as String,
@@ -97,7 +97,7 @@ class Wallet {
       };
 
   // copyWith — dùng khi update local state mà không mutate object gốc
-  Wallet copyWith({
+  WalletModel copyWith({
     int? id,
     int? userid,
     String? name,
@@ -112,7 +112,7 @@ class Wallet {
     String? color,
     DateTime? createdAt,
   }) =>
-      Wallet(
+      WalletModel(
         id:            id            ?? this.id,
         userid:        userid        ?? this.userid,
         name:          name          ?? this.name,
@@ -130,7 +130,7 @@ class Wallet {
 
   @override
   bool operator ==(Object other) =>
-      other is Wallet && other.id == id;
+      other is WalletModel && other.id == id;
 
   @override
   int get hashCode => id.hashCode;

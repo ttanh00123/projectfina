@@ -1,11 +1,11 @@
 {
   "id": 1,
-  "email": "trantrung22@gmail.com",
-  "password_hash": null,
-  "display_name": "Trung",
+  "email": "",
+  "password_hash": "",
+  "display_name": "",
   "birth_date": "",
   "gender": "",
   "address": "",
   "avatar": "",
-  "status": ""
+  "status": 9
 }

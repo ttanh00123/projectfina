@@ -45,5 +45,10 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+  <key>NSCameraUsageDescription</key>
+  <string>Chụp ảnh hoá đơn</string>
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>Chọn ảnh hoá đơn từ thư viện</string>
 </dict>
 </plist>

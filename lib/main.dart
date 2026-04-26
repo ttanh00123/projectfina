@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:taexpense/screens/home_screen.dart';
 import 'package:taexpense/screens/login_screen.dart';
+import 'package:taexpense/screens/onboarding_screen.dart';
 import 'package:taexpense/screens/signup_screen.dart';
 import 'package:taexpense/screens/splash_screen.dart';
 import 'package:taexpense/theme/app_theme.dart';
@@ -41,21 +42,21 @@ class MyApp extends StatelessWidget {
           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           // Viền mặc định khi không focus
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30.0),
+            borderRadius: BorderRadius.circular(14.0),
             borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0),
           ),
           // Viền khi người dùng nhấn vào (Focus)
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30.0),
+            borderRadius: BorderRadius.circular(14.0),
             borderSide: BorderSide(color: Colors.blue.shade700, width: 2.0),
           ),
           // Viền khi có lỗi
           errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30.0),
+            borderRadius: BorderRadius.circular(14),
             borderSide: const BorderSide(color: Colors.red, width: 1.0),
           ),
           focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(30.0),
+            borderRadius: BorderRadius.circular(14.0),
             borderSide: const BorderSide(color: Colors.red, width: 2.0),
           ),
           
@@ -92,6 +93,7 @@ class MyApp extends StatelessWidget {
         SplashScreen.routeName: (context) => const SplashScreen(),
         LoginScreen.routeName: (context) => const LoginScreen(),
         HomeScreen.routeName: (context) => const HomeScreen(),
+        OnboardingScreen.routeName: (context) => const OnboardingScreen(),
       },
     );
   }
