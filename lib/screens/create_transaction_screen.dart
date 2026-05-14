@@ -22,8 +22,9 @@ import 'package:taexpense/utils/material_icons_map.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class CreateTransactionScreen extends StatefulWidget {
+  final int initialType; // ← thêm vào
   final TransactionData? prefill;
-  const CreateTransactionScreen({super.key, this.prefill});
+  const CreateTransactionScreen({super.key, this.prefill, this.initialType = 0});
 
   @override
   State<CreateTransactionScreen> createState() =>
@@ -31,13 +32,18 @@ class CreateTransactionScreen extends StatefulWidget {
 }
 
 class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
+  late int _type;
   final _formKey = GlobalKey<FormState>();
   final _amountCtrl = TextEditingController();
   final _receiveAmountCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
 
-  int _type = 0; // 0=expense 1=income 2=transfer
+  // Định nghĩa các constant
+  static const int typeExpense  = 0;
+  static const int typeIncome   = 1;
+  static const int typeTransfer = 2;
+
   String get _currency => _fromWallet?.currency ?? 'VND';
   // Các đồng tiền không dùng số thập phân
   bool get _isIntegerCurrency =>
@@ -70,6 +76,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
   @override
   void initState() {
     super.initState();
+
+    _type = widget.initialType; // ← init từ parameter
 
     // Default wallet = ví đầu tiên
     _fromWallet = _wallets.isNotEmpty ? _wallets.first : null;
@@ -502,7 +510,7 @@ Color _hexToColor(String? hex) {
 class _TypeToggle extends StatelessWidget {
   final int value;
   final ValueChanged<int> onChanged;
-  const _TypeToggle({required this.value, required this.onChanged});
+const _TypeToggle({required this.value, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {

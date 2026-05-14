@@ -25,11 +25,11 @@ class WalletIcon extends StatelessWidget {
           size: size,
           color: hexToColor(hexColor),
         ),
-        Text(
-          _nameMap[iconKey] ?? iconKey.replaceAll('_', ' ').toUpperCase(),
-          style: TextStyle(fontSize: 10, color: hexToColor(hexColor)),
-          textAlign: TextAlign.center,
-        ),
+        // Text(
+        //   _nameMap[iconKey] ?? iconKey.replaceAll('_', ' ').toUpperCase(),
+        //   style: TextStyle(fontSize: 10, color: hexToColor(hexColor)),
+        //   textAlign: TextAlign.center,
+        // ),
       ],
     );
   }

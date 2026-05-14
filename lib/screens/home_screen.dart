@@ -78,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // Không dùng static vì cần truyền hàm _onItemTapped
   List<Widget> get _pages => [
     _DashboardPage(onNavigate: _onItemTapped), // Truyền callback xuống
-    const _ChartPlaceholder(),
+    const WalletListScreen(),
     const SizedBox.shrink(),
     const HistoryScreen(),
     const SettingsScreen(),
@@ -625,24 +625,24 @@ class _QuickActions extends StatelessWidget {
         (Icons.add_circle_outline_rounded, t.addExpense, () async {
           final added = await Navigator.push<bool>(context,
               MaterialPageRoute(
-                  builder: (_) => const CreateTransactionScreen()));
+                  builder: (_) => const CreateTransactionScreen(initialType: 0,)));
           if (added == true) onTransactionAdded();
         }),
         (Icons.add_circle_outline_rounded, t.addIncome, () async {
           final added = await Navigator.push<bool>(context,
               MaterialPageRoute(
-                  builder: (_) => const CreateTransactionScreen()));
+                  builder: (_) => const CreateTransactionScreen(initialType: 1,)));
           if (added == true) onTransactionAdded();
         }),
         (Icons.swap_horiz_rounded, t.transfer, () async {
           final added = await Navigator.push<bool>(context,
               MaterialPageRoute(
-                  builder: (_) => const CreateTransactionScreen()));
+                  builder: (_) => const CreateTransactionScreen(initialType: 2,)));
           if (added == true) onTransactionAdded();
         }),
-        (Icons.account_balance_wallet_outlined, t.wallets, () =>
-            Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const WalletListScreen()))),
+        // (Icons.account_balance_wallet_outlined, t.wallets, () =>
+        //     Navigator.push(context,
+        //         MaterialPageRoute(builder: (_) => const WalletListScreen()))),
         
       ])
         // Expanded(
@@ -735,7 +735,7 @@ class _BottomNav extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Row(children: [
             _NavItem(icon: Icons.home_rounded,        label: t.home,    idx: 0, current: current, onTap: onTap),
-            _NavItem(icon: Icons.bar_chart_rounded,   label: t.charts,  idx: 1, current: current, onTap: onTap),
+            _NavItem(icon: Icons.wallet,   label: t.wallets,  idx: 1, current: current, onTap: onTap),
             _AddButton(onTap: () => onTap(2)),
             _NavItem(icon: Icons.receipt_long_rounded, label: t.history, idx: 3, current: current, onTap: onTap),
             _NavItem(icon: Icons.settings_outlined,   label: t.settings, idx: 4, current: current, onTap: onTap),
