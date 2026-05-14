@@ -146,21 +146,17 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
   }
 
   Future<void> _save() async {
+    var t = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
     if (_fromWallet == null) {
-      setState(() => _error = 'Vui lòng chọn ví');
+      setState(() => _error = t.selectWallet); // Use localized error message
       return;
     }
     if (_isTransfer && _toWallet == null) {
-      setState(() => _error = 'Vui lòng chọn ví đích');
+      setState(() => _error = t.selectToWallet); // Use localized error message
       return;
     }
-
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
-
+    
     try {
       // 1. Upload bill images lên temp
       final tempKeys = <String>[];
@@ -174,12 +170,27 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
           .parse(_amountCtrl.text.isEmpty ? '0' : _amountCtrl.text)
           .toDouble();
 
+      if (rawAmount == 0 || rawAmount.isNaN || rawAmount.isNegative) {
+        setState(() => _error = t.invalidAmount); // Use localized error message
+        return;
+      }
+
       final rawReceive = _isTransfer && _receiveAmountCtrl.text.isNotEmpty
           ? NumberFormat('#,##0.##', 'vi_VN')
               .parse(_receiveAmountCtrl.text)
               .toDouble()
           : null;
 
+      if (_isTransfer && (rawReceive == 0 || rawReceive!.isNaN || rawReceive.isNegative)) {
+        setState(() => _error = t.invalidReceiveAmount); // Use localized error message
+        return;
+      }
+
+      setState(() {
+            _saving = true;
+            _error = null;
+          });
+          
       await TransactionService.saveTransaction({
         'type': _type,
         'wallet_id': _fromWallet!.id,
@@ -206,7 +217,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ));
-        Navigator.pop(context);
+        Navigator.of(context).pop(true); // trả về true để HomeScreen biết là cần refresh
       }
     } on ApiException catch (e) {
       setState(() => _error = e.message);
@@ -446,11 +457,11 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                 const SizedBox(height: 20),
 
                 // ── Bill images ────────────────────────────────────────────────
-                BillImagePicker(
-                  images: _billImages,
-                  onChanged: (imgs) => setState(() => _billImages = imgs),
-                ),
-                const SizedBox(height: 24),
+                // BillImagePicker(
+                //   images: _billImages,
+                //   onChanged: (imgs) => setState(() => _billImages = imgs),
+                // ),
+                // const SizedBox(height: 24),
 
                 // ── Save button ────────────────────────────────────────────────
                 FinaButton(

@@ -11,7 +11,6 @@ import 'package:taexpense/screens/signup_screen.dart';
 import 'package:taexpense/screens/splash_screen.dart';
 import 'package:taexpense/screens/wallet_list_screen.dart';
 import 'package:taexpense/theme/app_theme.dart';
-import 'home.dart';
 import 'auth_screen.dart';
 import 'locale_provider.dart';
 

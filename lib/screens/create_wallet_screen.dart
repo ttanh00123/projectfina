@@ -184,69 +184,73 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
             _buildPreview(),
 
             // Wallet type grid — chỉ hiện khi tạo mới
-            if (!_isEditMode)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SectionHeader(title: 'Loại ví'),
-                    GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 3,
-                      childAspectRatio: 2,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      children: kWalletTypes.map((wt) {
-                        final active = wt.nameKey == _selectedType.nameKey;
-                        final color = WalletIcon.hexToColor(_selectedColor);
-                        return GestureDetector(
-                          onTap: () => setState(() => _selectedType = wt),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            decoration: BoxDecoration(
-                              color: active
-                                  ? color.withOpacity(0.08)
-                                  : Theme.of(context)
-                                      .colorScheme
-                                      .surfaceVariant,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color: active ? color : Colors.transparent,
-                                  width: 2),
+            if (_isEditMode)
+              WalletIcon(hexColor: _selectedColor, size: 20, iconKey: _selectedType.icon,)
+              // Text('Loại ví: ${_selectedType.nameKey}', style: GoogleFonts.dmSans(fontSize: 14, color: kText))
+            else
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SectionHeader(title: 'Loại ví'),
+                      GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount: 3,
+                        childAspectRatio: 2,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        children: kWalletTypes.map((wt) {
+                          final active = wt.nameKey == _selectedType.nameKey;
+                          final color = WalletIcon.hexToColor(_selectedColor);
+                          return GestureDetector(
+                            onTap: () => setState(() => _selectedType = wt),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              decoration: BoxDecoration(
+                                color: active
+                                    ? color.withOpacity(0.08)
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .surfaceVariant,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: active ? color : Colors.transparent,
+                                    width: 2),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  WalletIcon(
+                                      iconKey: wt.icon,
+                                      hexColor: _selectedColor,
+                                      size: 26),
+                                  const SizedBox(height: 6),
+                                  Text(l10n.translateKey(wt.nameKey),
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: active
+                                              ? FontWeight.w500
+                                              : FontWeight.normal,
+                                          color: active
+                                              ? Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                              : Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurfaceVariant),
+                                      textAlign: TextAlign.center),
+                                ],
+                              ),
                             ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                WalletIcon(
-                                    iconKey: wt.icon,
-                                    hexColor: _selectedColor,
-                                    size: 26),
-                                const SizedBox(height: 6),
-                                Text(l10n.translateKey(wt.nameKey),
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: active
-                                            ? FontWeight.w500
-                                            : FontWeight.normal,
-                                        color: active
-                                            ? Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                            : Theme.of(context)
-                                                .colorScheme
-                                                .onSurfaceVariant),
-                                    textAlign: TextAlign.center),
-                              ],
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              
 
             if (_error != null)
               Padding(

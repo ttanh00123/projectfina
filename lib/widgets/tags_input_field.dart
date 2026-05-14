@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:taexpense/theme/app_theme.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class TagsInputField extends StatefulWidget {
   final List<String> tags;
@@ -74,7 +75,9 @@ class _TagsInputFieldState extends State<TagsInputField> {
   }
 
   @override
-  Widget build(BuildContext context) => Column(
+  Widget build(BuildContext context) {
+    var t = AppLocalizations.of(context)!;
+    return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Text('Tags', style: GoogleFonts.dmSans(
@@ -85,11 +88,11 @@ class _TagsInputFieldState extends State<TagsInputField> {
       Container(
         constraints: const BoxConstraints(minHeight: 48),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
-          border: Border.all(color: kBorder),
-          borderRadius: BorderRadius.circular(12),
-        ),
+        // decoration: BoxDecoration(
+        //   color: const Color(0xFFF9FAFB),
+        //   border: Border.all(color: kBorder),
+        //   borderRadius: BorderRadius.circular(12),
+        // ),
         child: Wrap(
           spacing: 6, runSpacing: 6,
           crossAxisAlignment: WrapCrossAlignment.center,
@@ -102,14 +105,14 @@ class _TagsInputFieldState extends State<TagsInputField> {
               child: TextField(
                 controller: _ctrl,
                 focusNode: _focus,
-                decoration: InputDecoration(
-                  hintText: widget.tags.isEmpty ? 'ăn uống, cafe...' : '',
-                  hintStyle: GoogleFonts.dmSans(
-                      fontSize: 14, color: kSubtext),
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 4),
-                ),
+                // decoration: InputDecoration(
+                //   hintText: widget.tags.isEmpty ? t.tagsHint : '',
+                //   hintStyle: GoogleFonts.dmSans(
+                //       fontSize: 14, color: kSubtext),
+                //   border: InputBorder.none,
+                //   isDense: true,
+                //   contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                // ),
                 style: GoogleFonts.dmSans(fontSize: 14, color: kText),
                 onSubmitted: (v) => _addTag(v.trim()),
               ),
@@ -146,10 +149,11 @@ class _TagsInputFieldState extends State<TagsInputField> {
             )).toList(),
           ),
         ),
-      Text('Nhập tag, cách nhau bằng dấu phẩy',
+      Text(t.tagsHint, // Use localized hint text
           style: GoogleFonts.dmSans(fontSize: 11, color: kSubtext)),
     ],
   );
+  }
 }
 
 class _TagChip extends StatelessWidget {

@@ -16,10 +16,21 @@ class WalletIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Icon(
-      _iconMap[iconKey] ?? Icons.account_balance_wallet,
-      size: size,
-      color: hexToColor(hexColor),
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(
+          _iconMap[iconKey] ?? Icons.account_balance_wallet,
+          size: size,
+          color: hexToColor(hexColor),
+        ),
+        Text(
+          _nameMap[iconKey] ?? iconKey.replaceAll('_', ' ').toUpperCase(),
+          style: TextStyle(fontSize: 10, color: hexToColor(hexColor)),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 
@@ -35,5 +46,21 @@ class WalletIcon extends StatelessWidget {
     'phone_android':      Icons.phone_android,
     'savings':            Icons.savings,
     'trending_up':        Icons.trending_up,
+  };
+
+
+// WalletType(nameKey: 'wallet_type.cash',       icon: 'payments',        sortOrder: 1),
+//   WalletType(nameKey: 'wallet_type.bank',        icon: 'account_balance', sortOrder: 2),
+//   WalletType(nameKey: 'wallet_type.credit',      icon: 'credit_card',     sortOrder: 3),
+//   WalletType(nameKey: 'wallet_type.ewallet',     icon: 'phone_android',   sortOrder: 4),
+//   WalletType(nameKey: 'wallet_type.investment',  icon: 'trending_up',     sortOrder: 5),
+//   WalletType(nameKey: 'wallet_type.savings',     icon: 'savings',         sortOrder: 6),
+  static const _nameMap = {
+    'payments':           'Cash',
+    'account_balance':    'Bank Account',
+    'credit_card':        'Credit Card',
+    'phone_android':      'eWallet',
+    'savings':            'Savings',
+    'trending_up':        'Investment',
   };
 }

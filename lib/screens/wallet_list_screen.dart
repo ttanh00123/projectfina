@@ -143,11 +143,10 @@ class _WalletListScreenState extends State<WalletListScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [kPrimary, kPrimary.withOpacity(0.7)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: const LinearGradient(
+            colors: [kPrimary, kPrimaryL],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(

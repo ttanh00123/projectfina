@@ -20,16 +20,23 @@ class AppConstants {
   static const String CATEGORIES_API = "$BASE_URL/categories/";
 
   //PROMPT
-  static const String PROMPT_API = "$BASE_URL/transaction/prompt";
+  static const String PROMPT_API = "$BASE_URL/transactions/prompt";
   
 }
 
 const kCurrencies = ['VND','SGD','USD','EUR','GBP','JPY','AUD','CAD','THB','MYR'];
 
 const kCurrencySymbols = {
-  'VND': '₫', 'SGD': 'S\$', 'USD': '\$', 'EUR': '€',
-  'GBP': '£', 'JPY': '¥',  'AUD': 'A\$','CAD': 'C\$',
-  'THB': '฿', 'MYR': 'RM',
+  'VND': '₫',
+  'SGD': 'S\$',
+  'USD': '\$',
+  'EUR': '€',
+  'GBP': '£',
+  'JPY': '¥',
+  'AUD': 'A\$',
+  'CAD': 'C\$',
+  'THB': '฿',
+  'MYR': 'RM',
 };
 
 const kCountries = {
