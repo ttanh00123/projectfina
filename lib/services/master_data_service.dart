@@ -32,7 +32,8 @@ class MasterDataService {
   }
 
   // ── GET /master-data/sync ──────────────────────────────────────────────────
-
+  // Sync master data: server sẽ trả về "changed": false nếu dữ liệu không thay đổi 
+  //(dựa trên MD5 từ client), giúp tiết kiệm băng thông và tăng tốc độ phản hồi.
   static Future<Map<String, dynamic>> sync({
     required String authToken,
     String? clientMd5,

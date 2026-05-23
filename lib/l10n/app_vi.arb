@@ -9,8 +9,8 @@
   "logout": "Đăng xuất",
   "todayTransactions": "Giao dịch hôm nay",
   "noTransactions": "Không có giao dịch nào hôm nay",
-  "amount": "Số Tiền",
-  "category": "Danh Mục",
+  "amount": "Số tiền",
+  "category": "Danh mục",
   "quickAdd": "Thêm Giao Dịch Nhanh",
   "walletTypeCash": "Tiền mặt",
   "walletTypeBank": "Tài khoản ngân hàng",
@@ -69,5 +69,12 @@
   "chatbotWelcomeMessage": "Xin chào! Hãy kể cho tôi về một giao dịch — bạn có thể nhập tay hoặc nhấn vào biểu tượng mic và nói\n\nVí dụ: \"Cafe ở T1 35k\" hoặc \"Lương 15 triệu\"",
   "chatbotName": "Trợ lý FinA",
   "chatInputHint": "'Nhập giao dịch...",
-  "listeningText": "Đang nghe..."
+  "listeningText": "Đang nghe...",
+  "location": "Địa điểm",
+  "content": "Nội dung",
+  "date": "Ngày",
+  "time": "Giờ",
+  "confirmed": "Xác nhận",
+  "delete": "Xóa",
+  "contentHint": "Nội dung..."
 }

@@ -49,7 +49,7 @@ class TransactionData {
   final int type; // 0 for expense, 1 for income
   final double amount;
   final String currency;
-  final String? address;
+  final String? content;
   final WalletModel? wallet; // Chuyển thành nullable
   final String dateTime;
   final int category;
@@ -60,7 +60,7 @@ class TransactionData {
     required this.type,
     required this.amount,
     required this.currency,
-    this.address,
+    this.content,
     this.wallet,
     required this.dateTime,
     required this.category,
@@ -80,7 +80,7 @@ class TransactionData {
       type: typeValue,
       amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
       currency: json['currency'] ?? 'VND',
-      address: json['address'] ?? json['content'], // Lấy content làm địa chỉ nếu address trống
+      content: json['content'],
       wallet: json['wallet'] != null ? WalletModel.fromJson(json['wallet']) : null,
       dateTime: json['date_time'] ?? DateTime.now().toIso8601String(),
       category: json['master_category_id'] ?? 0,
@@ -95,7 +95,7 @@ class TransactionData {
       type: value['type'] ?? 0,
       amount: (value['amount'] as num?)?.toDouble() ?? 0.0,
       currency: value['currency'] ?? 'VND',
-      address: value['address'],
+      content: value['address'],
       wallet: value['wallet'] != null ? WalletModel.fromJson(value['wallet']) : null,
       dateTime: value['dateTime'] ?? DateTime.now().toIso8601String(),
       category: (value['category'] is int) ? value['category'] : 0,
@@ -110,7 +110,7 @@ class TransactionData {
       type: type,
       amount: amount,
       currency: currency,
-      address: address,
+      content: content,
       wallet: wallet ?? this.wallet,
       dateTime: dateTime,
       category: category,

@@ -112,4 +112,31 @@ class MasterDataStore {
                    || h.contains(c.name.toLowerCase()))
         .firstOrNull;
   }
+
+  // ── Display name helpers ───────────────────────────────────────────────────
+
+  String categoryName(int? id) =>
+      id == null ? '-' : MasterDataStore().categories.firstWhere((c) => c.id == id).name;
+
+  String walletName(int? id) =>
+      id == null ? '-' : MasterDataStore().wallets.firstWhere((w) => w.id == id).name;
+
+  // Category? get categoryName(int id) {
+  //   if (id == null) return null;
+  //   try {
+  //     return MasterDataStore().categories
+  //         .firstWhere((c) => c.id == id);
+  //   } catch (_) {
+  //     return null;
+  //   }
+  // }
+
+  // WalletModel? get getWallet(int id) {
+  //   try {
+  //     return MasterDataStore().wallets
+  //         .firstWhere((w) => w.id == id);
+  //   } catch (_) {
+  //     return null;
+  //   }
+  // }
 }

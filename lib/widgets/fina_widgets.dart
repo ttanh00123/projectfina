@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:taexpense/app_constants.dart';
+import 'package:taexpense/utils/utils.dart';
 import '../theme/app_theme.dart';
 
 // ── Logo ──────────────────────────────────────────────────────────────────────
@@ -176,4 +178,107 @@ class SectionHeader extends StatelessWidget {
     child: Text(title, style: GoogleFonts.spaceGrotesk(
       fontSize: 16, fontWeight: FontWeight.w700, color: kText)),
   );
+}
+
+/// ======================================================
+/// TRANSACTION TYPES
+/// 0 = Expense
+/// 1 = Income
+/// 2 = Transfer
+/// ======================================================
+
+class AmountText extends StatelessWidget {
+  final double amount;
+  final int type;
+
+  final double fontSize;
+  final FontWeight fontWeight;
+
+  const AmountText({
+    super.key,
+    required this.amount,
+    required this.type,
+    this.fontSize = 14,
+    this.fontWeight = FontWeight.w600,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isExpense = type == 0;
+    final bool isIncome = type == 1;
+    final bool isTransfer = type == 2;
+
+    final Color amtColor =
+        isTransfer
+            ? kSubtext
+            : isExpense
+                ? kExpense
+                : kIncome;
+
+    final String prefix =
+        isExpense
+            ? '-'
+            : isTransfer
+                ? '⇄'
+                : '+';
+
+    return Text(
+      '$prefix${Utils.moneyFormatFromDouble(amount)}',
+      style: GoogleFonts.spaceGrotesk(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: amtColor,
+      ),
+    );
+  }
+}
+
+/// ======================================================
+/// TRANSACTION ICON WIDGET
+/// ======================================================
+
+class TransactionIconWidget extends StatelessWidget {
+  final int type;
+
+  final double radius;
+  final double iconSize;
+
+  const TransactionIconWidget({
+    super.key,
+    required this.type,
+    this.radius = 24,
+    this.iconSize = 22,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isExpense = type == 0;
+    final bool isIncome = type == 1;
+
+    final IconData typeIcon =
+        isExpense
+            ? Icons.arrow_downward_rounded
+            : isIncome
+                ? Icons.arrow_upward_rounded
+                : Icons.swap_horiz_rounded;
+
+    final Color accentColor =
+        isExpense
+            ? kExpense
+            : isIncome
+                ? kIncome
+                : kSubtext;
+
+    final Color accentBg = accentColor.withOpacity(0.12);
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: accentBg,
+      child: Icon(
+        typeIcon,
+        color: accentColor,
+        size: iconSize,
+      ),
+    );
+  }
 }

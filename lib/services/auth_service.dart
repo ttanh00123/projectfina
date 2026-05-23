@@ -27,7 +27,7 @@ Future<bool> logout(BuildContext context) async {
 }
 
 Future updateFCMToken(userId, token) async {
-  print('Update FCM Token to Backend');
+  logger.e("Updating FCM Token to Backend");
   var data = {};
   data["push_noti_token"] = token;
   final response = await http.put(
@@ -47,6 +47,7 @@ Future updateFCMToken(userId, token) async {
 }
 
 Future<UserModel?> loginWithToken() async {
+  logger.e("Login with token");
   String? token = await AuthStorage.getToken();
   debugPrint('Token: $token', wrapWidth: 1024);
   
@@ -75,6 +76,7 @@ Future<UserModel?> loginWithToken() async {
         //If no FCM Token available? update it
         updateFCMTokenIfNeeded(user);
 
+        logger.e("Login with token succeeded");
         return user;
       }
     }
@@ -119,9 +121,9 @@ Future<UserModel?> loginWithPassword(
 }
 
 Future updateFCMTokenIfNeeded(UserModel user) async {
-  print('FMC Token= {}'.format(user.fcmToken ?? ""));
+  logger.e("Checking FCM Token");
   if (user.fcmToken == null || user.fcmToken!.isEmpty) {
-    print('FMC Token is empty');
+    logger.e("FCM Token is empty");
     final fcmToken = await FirebaseMessaging.instance.getToken();
     updateFCMToken(user.id, fcmToken);
   }

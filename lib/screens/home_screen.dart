@@ -6,9 +6,13 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:taexpense/app_constants.dart';
 import 'package:taexpense/models/transaction_data.dart';
+import 'package:taexpense/screens/edit_transaction_screen.dart';
+import 'package:taexpense/screens/transaction_detail_sheet.dart';
 import 'package:taexpense/screens/wallet_list_screen.dart';
+import 'package:taexpense/services/master_data_store.dart';
 import 'package:taexpense/session.dart';
 import 'package:taexpense/utils/material_icons_map.dart';
+import 'package:taexpense/utils/utils.dart';
 import 'create_transaction_screen.dart';
 import '../theme/app_theme.dart';
 import '../widgets/fina_widgets.dart';
@@ -33,26 +37,32 @@ extension _PeriodExt on _Period {
 
 // ── Dashboard data model ───────────────────────────────────────────────────────
 class _DashboardData {
-  final List<Map<String, dynamic>> balances;
-  final Map<String, double>        income;
-  final Map<String, double>        expense;
+  final double                     totalBalance;
+  final double                     income;
+  final double                     expense;
   final List<Map<String, dynamic>> recentTx;
 
   const _DashboardData({
-    required this.balances,
+    required this.totalBalance,
     required this.income,
     required this.expense,
     required this.recentTx,
   });
 
+  // Giá trị khởi tạo mặc định bằng 0.0 sạch sẽ
   factory _DashboardData.empty() => const _DashboardData(
-    balances: [], income: {}, expense: {}, recentTx: []);
+    totalBalance: 0.0, 
+    income: 0.0, 
+    expense: 0.0, 
+    recentTx: []
+  );
 
   factory _DashboardData.fromJson(Map<String, dynamic> j) => _DashboardData(
-    balances: (j['total_balance'] as List).cast<Map<String, dynamic>>(),
-    income:   (j['income']  as Map).map((k, v) => MapEntry(k, (v as num).toDouble())),
-    expense:  (j['expense'] as Map).map((k, v) => MapEntry(k, (v as num).toDouble())),
-    recentTx: (j['recent_transactions'] as List).cast<Map<String, dynamic>>(),
+    // Ép kiểu an toàn từ 'num' sang 'double' đề phòng server trả về số nguyên (ví dụ: 20000000)
+    totalBalance: (j['total_balance'] as num? ?? 0.0).toDouble(),
+    income:       (j['income']        as num? ?? 0.0).toDouble(),
+    expense:      (j['expense']       as num? ?? 0.0).toDouble(),
+    recentTx:     (j['recent_transactions'] as List? ?? []).cast<Map<String, dynamic>>(),
   );
 }
 
@@ -280,30 +290,82 @@ class _DashboardPageState extends State<_DashboardPage> {
     ]),
   );
 
+  // void _showTransactionDetails(Map<String, dynamic> value) {
+  //   var t = AppLocalizations.of(context)!;
+  //   showDialog(
+  //     context: context,
+  //     builder: (_) => AlertDialog(
+  //       title: Text(value['type'] == 0 ? t.expense : value['type'] == 1 ? t.income : t.transfer),
+  //       content: Column(
+  //         mainAxisSize: MainAxisSize.min,
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: value.entries.map((e) =>
+  //             Text('${e.key}: ${e.value}')).toList(),
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context),
+  //           child: Text(t.close),
+  //         ),
+  //         TextButton(
+  //           onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => EditTransactionScreen(
+  //             transactionId: value['id'] as int,
+  //           ))),
+  //           child: Text(t.edit),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+
+  // void _showTransactionDetails(Map<String, dynamic> value) {
+  //   final t = AppLocalizations.of(context)!;
+  //   final isExpense = value['type'] == 0;
+  //   final isIncome = value['type'] == 1;
+
+  //   showModalBottomSheet(
+  //     context: context,
+  //     isScrollControlled: true,
+  //     backgroundColor: Colors.transparent,
+  //     builder: (_) => _TransactionDetailSheet(
+  //       data: value,
+  //       t: t,
+  //       onEdit: () {
+  //         Navigator.pop(context);
+  //         Navigator.push(
+  //           context,
+  //           MaterialPageRoute(
+  //             builder: (_) => EditTransactionScreen(
+  //               transactionId: value['id'] as int,
+  //             ),
+  //           ),
+  //         );
+  //       },
+  //     ),
+  //   );
+  // }
+
   void _showTransactionDetails(Map<String, dynamic> value) {
-    var t = AppLocalizations.of(context)!;
-    showDialog(
+    final t = AppLocalizations.of(context)!;
+
+    showModalBottomSheet(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(value['type'] == 0 ? t.expense : value['type'] == 1 ? t.income : t.transfer),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: value.entries.map((e) =>
-              Text('${e.key}: ${e.value}')).toList(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(t.close),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => CreateTransactionScreen(
-              prefill: TransactionData.fromMap(value),
-            ))),
-            child: Text(t.edit),
-          ),
-        ],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => TransactionDetailSheet(
+        data: value,
+        t: t,
+        onEdit: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => EditTransactionScreen(
+                transactionId: value['id'] as int,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -344,6 +406,9 @@ class _DashboardPageState extends State<_DashboardPage> {
   );
 }
 
+
+
+
 // ── Balance Card ───────────────────────────────────────────────────────────────
 class _BalanceCard extends StatelessWidget {
   final _DashboardData data;
@@ -358,16 +423,6 @@ class _BalanceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-
-    // Lấy currency chính (theo AppSettings hoặc currency đầu tiên)
-    final mainCurrency = data.balances.isNotEmpty
-        ? data.balances.first['currency'] as String
-        : 'VND';
-    final totalBalance = data.balances.isNotEmpty
-        ? data.balances.first['amount'] as double
-        : 0.0;
-    final income  = data.income[mainCurrency]  ?? 0.0;
-    final expense = data.expense[mainCurrency] ?? 0.0;
 
     return Container(
       width: double.infinity,
@@ -426,7 +481,7 @@ class _BalanceCard extends StatelessWidget {
                       backgroundColor: Colors.white24,
                       color: Colors.white)))
               : Text(
-                  _fmt(totalBalance, mainCurrency),
+                  Utils.moneyFormatFromDouble(data.totalBalance),
                   style: GoogleFonts.spaceGrotesk(
                       color: Colors.white, fontSize: 28,
                       fontWeight: FontWeight.w700),
@@ -434,21 +489,63 @@ class _BalanceCard extends StatelessWidget {
           const SizedBox(height: 20),
 
           // Income + Expense
-          Row(children: [
-            _BalanceStat(
-              label:  t.income,
-              amount: loading ? '—' : _fmt(income, mainCurrency),
-              icon:   Icons.arrow_downward_rounded,
-              color:  const Color(0xFF86EFAC),
-            ),
-            const SizedBox(width: 24),
-            _BalanceStat(
-              label:  t.expense,
-              amount: loading ? '—' : _fmt(expense, mainCurrency),
-              icon:   Icons.arrow_upward_rounded,
-              color:  const Color(0xFFFCA5A5),
-            ),
-          ]),
+          // Column(children: [
+          //   _BalanceStat(
+          //     label:  t.income,
+          //     amount: loading ? '—' : Utils.moneyFormatFromDouble(data.income),
+          //     icon:   Icons.arrow_downward_rounded,
+          //     color:  const Color(0xFF86EFAC),
+          //   ),
+          //   const SizedBox(height: 24),
+          //   _BalanceStat(
+          //     label:  t.expense,
+          //     amount: loading ? '—' : Utils.moneyFormatFromDouble(data.expense),
+          //     icon:   Icons.arrow_upward_rounded,
+          //     color:  const Color(0xFFFCA5A5),
+          //   ),
+          // ]),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // Lấy chiều rộng hiện tại của màn hình
+              final width = MediaQuery.sizeOf(context).width;
+              final isTablet = width >= 600; // Định nghĩa breakpoint chuẩn cho Tablet
+
+              // 1. Tạo sẵn Widget thẻ Income
+              final incomeWidget = _BalanceStat(
+                label:  t.income,
+                amount: loading ? '—' : Utils.moneyFormatFromDouble(data.income),
+                icon:   Icons.arrow_downward_rounded,
+                color:  const Color(0xFF86EFAC),
+              );
+
+              // 2. Tạo sẵn Widget thẻ Expense
+              final expenseWidget = _BalanceStat(
+                label:  t.expense,
+                amount: loading ? '—' : Utils.moneyFormatFromDouble(data.expense),
+                icon:   Icons.arrow_upward_rounded,
+                color:  const Color(0xFFFCA5A5),
+              );
+
+              // Tự động phân nhánh giao diện dựa theo thiết bị
+              if (isTablet) {
+                return Row(
+                  children: [
+                    Expanded(child: incomeWidget),  // Bọc Expanded để chia đôi tỷ lệ 50-50
+                    const SizedBox(width: 24),     // Khoảng cách theo chiều NGANG cho Tablet
+                    Expanded(child: expenseWidget), // Bọc Expanded để chia đôi tỷ lệ 50-50
+                  ],
+                );
+              } else {
+                return Column(
+                  children: [
+                    incomeWidget,
+                    const SizedBox(height: 24),    // Khoảng cách theo chiều DỌC cho Phone
+                    expenseWidget,
+                  ],
+                );
+              }
+            },
+          )
         ],
       ),
     );
@@ -479,13 +576,13 @@ class _BalanceCard extends StatelessWidget {
     );
   }
 
-  String _fmt(double amount, String currency) {
-    final isInt = const {'VND','JPY','KRW','IDR'}.contains(currency);
-    if (isInt) {
-      return '${NumberFormat('#,##0', 'vi_VN').format(amount.round())} $currency';
-    }
-    return '${NumberFormat('#,##0.00', 'en_US').format(amount)} $currency';
-  }
+  // String _fmt(double amount, String currency) {
+  //   final isInt = const {'VND','JPY','KRW','IDR'}.contains(currency);
+  //   if (isInt) {
+  //     return '${NumberFormat('#,##0', 'vi_VN').format(amount.round())} $currency';
+  //   }
+  //   return '${NumberFormat('#,##0.00', 'en_US').format(amount)} $currency';
+  // }
 }
 
 class _BalanceStat extends StatelessWidget {
@@ -526,48 +623,39 @@ class _TxItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final type     = tx['type'] as int;
     final amount   = tx['amount'] as double;
-    final currency = tx['currency'] as String? ?? 'VND';
+    // final currency = tx['currency'] as String? ?? 'VND';
     final content  = tx['content'] as String? ?? '';
     final catId    = tx['category_id'] as int?;
     final dtStr    = tx['date_time'] as String?;
     final color    = tx['wallet_color'] as String? ?? '#1D9E75';
 
     final isExpense  = type == 0;
+    final isIncome   = type == 1;
     final isTransfer = type == 2;
-    final amtColor   = isTransfer ? kSubtext
-        : isExpense  ? kError : kIncome;
-    final prefix     = isExpense ? '-' : isTransfer ? '⇄' : '+';
+    // final amtColor   = isTransfer ? kSubtext
+    //     : isExpense  ? kError : kIncome;
+    // final prefix     = isExpense ? '-' : isTransfer ? '⇄' : '+';
 
-    final isInt = const {'VND','JPY','KRW','IDR'}.contains(currency);
-    final amtStr = isInt
-        ? '${NumberFormat('#,##0', 'vi_VN').format(amount.round())} $currency'
-        : '${NumberFormat('#,##0.00', 'en_US').format(amount)} $currency';
+    // final isInt = const {'VND','JPY','KRW','IDR'}.contains(currency);
+    // final amtStr = isInt
+    //     ? '${NumberFormat('#,##0', 'vi_VN').format(amount.round())} $currency'
+    //     : '${NumberFormat('#,##0.00', 'en_US').format(amount)} $currency';
 
-    DateTime? dt;
-    try { dt = dtStr != null ? DateTime.parse(dtStr).toLocal() : null; }
-    catch (_) {}
+    // DateTime? dt;
+    // try { dt = dtStr != null ? DateTime.parse(dtStr).toLocal() : null; }
+    // catch (_) {}
 
     // Icon từ category_id — dùng fallback icon theo type
-    final iconData = isTransfer
-        ? Icons.swap_horiz_rounded
-        : isExpense ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded;
+    // final iconData = isTransfer
+    //     ? Icons.swap_horiz_rounded
+    //     : isExpense ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(children: [
         // Icon
-        Container(
-          width: 42, height: 42,
-          decoration: BoxDecoration(
-            color: _hexToColor(color).withOpacity(0.12),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(iconData, size: 20,
-              color: isTransfer ? kSubtext
-                  : isExpense  ? kError : kIncome),
-        ),
+        TransactionIconWidget(type: type, radius: 20, iconSize: 14),
         const SizedBox(width: 12),
-
         // Content + date
         Expanded(
           child: Column(
@@ -583,25 +671,26 @@ class _TxItem extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              if (dt != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  DateFormat('HH:mm, dd MMM').format(dt),
-                  style: GoogleFonts.dmSans(
-                      fontSize: 11, color: kSubtext),
-                ),
-              ],
+              
+              const SizedBox(height: 2),
+              Text(
+                Utils.formattedServerDateTime(dtStr),
+                style: GoogleFonts.dmSans(
+                    fontSize: 11, color: kSubtext),
+              ),
+              
             ],
           ),
         ),
 
         // Amount
-        Text(
-          '$prefix $amtStr',
-          style: GoogleFonts.spaceGrotesk(
-              fontSize: 14, fontWeight: FontWeight.w600,
-              color: amtColor),
-        ),
+        // Text(
+        //   Utils.moneyFormatFromDouble(amount),
+        //   style: GoogleFonts.spaceGrotesk(
+        //       fontSize: 14, fontWeight: FontWeight.w600,
+        //       color: amtColor),
+        // ),
+        AmountText(amount: amount, type: type),
       ]),
     );
   }
@@ -640,75 +729,49 @@ class _QuickActions extends StatelessWidget {
                   builder: (_) => const CreateTransactionScreen(initialType: 2,)));
           if (added == true) onTransactionAdded();
         }),
-        // (Icons.account_balance_wallet_outlined, t.wallets, () =>
-        //     Navigator.push(context,
-        //         MaterialPageRoute(builder: (_) => const WalletListScreen()))),
-        
       ])
-        // Expanded(
-        //   child: GestureDetector(
-        //     onTap: item.$3,
-        //     child: Container(
-        //       margin: const EdgeInsets.symmetric(horizontal: 4),
-        //       padding: const EdgeInsets.symmetric(vertical: 14),
-        //       decoration: BoxDecoration(
-        //           color: kPrimary,
-        //           borderRadius: BorderRadius.circular(14)),
-        //       child: Column(children: [
-        //         Icon(item.$1, color: Colors.white, size: 22),
-        //         const SizedBox(height: 6),
-        //         Text(item.$2,
-        //             style: GoogleFonts.dmSans(
-        //                 fontSize: 11, fontWeight: FontWeight.w600,
-        //                 color: Colors.white)),
-        //       ]),
-        //     ),
-        //   ),
-        // ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            // 1. Dùng Material để hiển thị hiệu ứng Ink (gợn sóng)
-            child: Material(
-              // color: kPrimary, // Màu nền của nút
-              borderRadius: BorderRadius.circular(14),
-              // 2. InkWell xử lý sự kiện bấm và tạo hiệu ứng gợn sóng
-              child: InkWell(
-                onTap: item.$3,
-                borderRadius: BorderRadius.circular(14), // Bo góc hiệu ứng khớp với Material
-                splashColor: Colors.white.withOpacity(0.2), // Màu hiệu ứng gợn sóng
-                highlightColor: Colors.white.withOpacity(0.1), // Màu khi nhấn giữ
-                child: Container(
-                  // Lưu ý: Không đặt màu nền (color) trong BoxDecoration của Container nữa 
-                  // vì Material đã quản lý màu nền để hiệu ứng Ink có thể hiển thị lên trên.
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    gradient: const LinearGradient(
-                      colors: [kPrimary, kPrimaryL],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(item.$1, color: Colors.white, size: 22),
-                      const SizedBox(height: 6),
-                      Text(
-                        item.$2,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
+      Expanded(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          // 1. Dùng Material để hiển thị hiệu ứng Ink (gợn sóng)
+          child: Material(
+            // color: kPrimary, // Màu nền của nút
+            borderRadius: BorderRadius.circular(14),
+            // 2. InkWell xử lý sự kiện bấm và tạo hiệu ứng gợn sóng
+            child: InkWell(
+              onTap: item.$3,
+              borderRadius: BorderRadius.circular(14), // Bo góc hiệu ứng khớp với Material
+              splashColor: Colors.white.withOpacity(0.2), // Màu hiệu ứng gợn sóng
+              highlightColor: Colors.white.withOpacity(0.1), // Màu khi nhấn giữ
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: const LinearGradient(
+                    colors: [kPrimary, kPrimaryL],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(item.$1, color: Colors.white, size: 22),
+                    const SizedBox(height: 6),
+                    Text(
+                      item.$2,
+                      style: GoogleFonts.dmSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
-        )
+        ),
+      )
     ]);
   }
 }

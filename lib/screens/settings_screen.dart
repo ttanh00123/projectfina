@@ -179,7 +179,7 @@ import 'package:taexpense/services/master_data_store.dart';
 import 'package:taexpense/services/settings_service.dart';
 import 'package:taexpense/session.dart';
 import '../theme/app_theme.dart';
-import '../utils/app_settings.dart';
+import '../utils/app_config.dart';
 import 'login_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -225,7 +225,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (result != null) {
       await SettingsService.setLocale(result);
-      await AppSettings.load();
+      await AppConfig.load();
 
       //Sync Master Data với locale mới
       await MasterDataStore().sync(await AuthStorage.getToken() ?? '', locale: result);
@@ -255,7 +255,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (result != null) {
       await SettingsService.setCurrency(result);
-      await AppSettings.load();
+      await AppConfig.load();
       setState(() => currency = result);
     }
   }

@@ -36,18 +36,12 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
   final _formKey = GlobalKey<FormState>();
   final _amountCtrl = TextEditingController();
   final _receiveAmountCtrl = TextEditingController();
-  final _addressCtrl = TextEditingController();
+  final _contentCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
-
-  // Định nghĩa các constant
-  static const int typeExpense  = 0;
-  static const int typeIncome   = 1;
-  static const int typeTransfer = 2;
 
   String get _currency => _fromWallet?.currency ?? 'VND';
   // Các đồng tiền không dùng số thập phân
-  bool get _isIntegerCurrency =>
-      ['VND', 'JPY', 'KRW', 'IDR'].contains(_currency);
+  bool get _isIntegerCurrency => ['VND', 'JPY', 'KRW', 'IDR'].contains(_currency);
 
   DateTime _dt = DateTime.now();
   List<String> _tags = [];
@@ -67,11 +61,11 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
   List<String> get _tagSuggestions =>
       MasterDataStore().recentTags; // optional: lưu tags hay dùng
 
-  bool get _isTransfer => _type == 2;
+  bool get _isTransfer => _type == AppConstants.TRANSFER; // chi tiết hơn: chỉ hiện trường toWallet và ẩn category khi type = transfer
 
   // Categories lọc theo type hiện tại
   List<Category> get _filteredCategories =>
-      _categories.where((c) => c.type == _type || c.type == 2).toList();
+      _categories.where((c) => c.type == _type || c.type == AppConstants.TRANSFER).toList();
 
   @override
   void initState() {
@@ -93,7 +87,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
       // _currency = p.currency;  // Lưu ý: currency sẽ theo wallet đã chọn, nên không set trực tiếp được
       _requestId = p.requestId;
       _amountCtrl.text = p.amount.toStringAsFixed(p.amount % 1 == 0 ? 0 : 2);
-      if (p.address != null) _addressCtrl.text = p.address!;
+      if (p.content != null) _contentCtrl.text = p.content!;
       if (p.note != null) _noteCtrl.text = p.note!;
 
       // Resolve wallet từ prefill
@@ -119,7 +113,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
   void dispose() {
     _amountCtrl.dispose();
     _receiveAmountCtrl.dispose();
-    _addressCtrl.dispose();
+    _contentCtrl.dispose();
     _noteCtrl.dispose();
     super.dispose();
   }
@@ -207,8 +201,8 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
         'receive_amount': rawReceive,
         'currency': _currency,
         'category_id': _isTransfer ? null : _category?.id,
-        'address':
-            _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
+        'content':
+            _contentCtrl.text.trim().isEmpty ? null : _contentCtrl.text.trim(),
         'note': _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
         'date_time': _dt.toUtc().toIso8601String(),
         'tags': _tags.isEmpty ? null : _tags.join(','),
@@ -295,6 +289,19 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                 ),
                 const SizedBox(height: 20),
 
+                // ── Content ─────────────────────────
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOut,
+                  child: FinaField(
+                    label: t.content,
+                    hint: t.contentHint,
+                    controller: _contentCtrl,
+                    prefix: const Icon(Icons.content_paste_rounded,
+                        size: 20, color: kSubtext),
+                  )
+                ),
+                const SizedBox(height: 20),
                 // ── Amount + Currency ──────────────────────────────────────────
                 Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
                   Expanded(
@@ -303,7 +310,7 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                       controller: _amountCtrl,
                       label: t.amount,
                       currency: _currency,
-                      isInteger: _isIntegerCurrency,
+                    isInteger: _isIntegerCurrency,
                     ),
                   ),
                 ]),
@@ -418,24 +425,6 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
                                     ))
                                 .toList(),
                             onChanged: (v) => setState(() => _category = v),
-                          ),
-                          const SizedBox(height: 20),
-                        ])
-                      : const SizedBox.shrink(),
-                ),
-
-                // ── Address / Merchant (expense only) ─────────────────────────
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeInOut,
-                  child: _type == 0
-                      ? Column(children: [
-                          FinaField(
-                            label: t.address,
-                            hint: t.merchantHint,
-                            controller: _addressCtrl,
-                            prefix: const Icon(Icons.location_on_outlined,
-                                size: 20, color: kSubtext),
                           ),
                           const SizedBox(height: 20),
                         ])

@@ -69,5 +69,12 @@
   "chatbotWelcomeMessage": "Hi! Tell me about a transaction — you can type or tap the mic 🎙️\n\nExample: \"Cafe 6 dollars at T1\" or \"Received salary 35k\"",
   "chatbotName": "FinA Assistant",
   "chatInputHint": "Describe your transaction here...",
-  "listeningText": "Listening..."
+  "listeningText": "Listening...",
+  "location": "Location",
+  "content": "Content",
+  "date": "Date",
+  "time": "Time",
+  "confirmed": "Confirmed",
+  "delete": "Delete",
+  "contentHint": "Content..."
 }

@@ -64,7 +64,7 @@ Future<List<Map<String, dynamic>>> getTransactions(
   int? walletId,
   int? categoryId,
   String? fromDate,
-  String? toDate,
+  String? toDate
 }) async {
   final params = {
     'limit':  '$limit',
@@ -84,6 +84,20 @@ Future<List<Map<String, dynamic>>> getTransactions(
 
   if (r.statusCode == 200) {
     return (jsonDecode(r.body) as List).cast<Map<String, dynamic>>();
+  }
+  throw ApiException(await _extractError(r), statusCode: r.statusCode);
+}
+
+// ── Get single transaction ────────────────────────────────────────────────────
+
+Future<Map<String, dynamic>> getTransaction(int id, String token) async {
+  final r = await http.get(
+    Uri.parse('${AppConstants.BASE_URL}/transactions/$id'),
+    headers: await _authHeaders(token),
+  ).timeout(const Duration(seconds: 15));
+
+  if (r.statusCode == 200) {
+    return jsonDecode(r.body) as Map<String, dynamic>;
   }
   throw ApiException(await _extractError(r), statusCode: r.statusCode);
 }

@@ -21,6 +21,10 @@ class AppConstants {
 
   //PROMPT
   static const String PROMPT_API = "$BASE_URL/transactions/prompt";
+
+  static const int EXPENSE = 0;
+  static const int INCOME = 1;
+  static const int TRANSFER = 2;
   
 }
 

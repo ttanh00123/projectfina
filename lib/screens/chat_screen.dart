@@ -151,12 +151,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     }
 
     // 4. Xây dựng nội dung text
-    final typeIcon = d.type == 0 ? '🛒 **Chi tiêu**' : '💰 **Thu nhập**';
+    final typeIcon = d.type == 0 ? '**${t.expense}**' : '**${t.income}**';
     
     // Hiển thị dạng: 8.00 S$ hoặc 200,000 ₫
     final botText = '$typeIcon\n'
-        'Số tiền: **$amtFmt $symbol**\n'
-        '${d.address != null && d.address!.isNotEmpty ? 'Địa điểm: **${d.address}**\n' : ''}';
+        '${t.amount}: **$amtFmt $symbol**\n'
+        '${t.content}: ${d.content}\n'
+        '${d.content != null && d.content!.isNotEmpty ? '${t.location}: **${d.content}**\n' : ''}';
     
     return botText;
   }

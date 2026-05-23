@@ -60,7 +60,7 @@ class _WalletListScreenState extends State<WalletListScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Xóa', style: TextStyle(color: kError)),
+            child: const Text('Xóa', style: TextStyle(color: kError)),
           ),
         ],
       ),
@@ -252,12 +252,12 @@ class _WalletListScreenState extends State<WalletListScreen> {
                   Text('Chỉnh sửa'),
                 ]),
               ),
-              PopupMenuItem(
+              const PopupMenuItem(
                 value: 'delete',
                 child: Row(children: [
                   Icon(Icons.delete_outline_rounded,
                       size: 16, color: kError),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Text('Xóa', style: TextStyle(color: kError)),
                 ]),
               ),
@@ -272,7 +272,7 @@ class _WalletListScreenState extends State<WalletListScreen> {
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.account_balance_wallet_outlined,
+        const Icon(Icons.account_balance_wallet_outlined,
             size: 64, color: kBorder),
         const SizedBox(height: 16),
         Text('Chưa có ví nào',

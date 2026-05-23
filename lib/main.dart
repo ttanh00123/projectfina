@@ -3,7 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:taexpense/utils/app_settings.dart';
+import 'package:taexpense/utils/app_config.dart';
 import 'package:taexpense/screens/home_screen.dart';
 import 'package:taexpense/screens/login_screen.dart';
 import 'package:taexpense/screens/onboarding_screen.dart';
@@ -16,7 +16,7 @@ import 'locale_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await AppSettings.load();
+  await AppConfig.load();
 
   runApp(
     ChangeNotifierProvider(
