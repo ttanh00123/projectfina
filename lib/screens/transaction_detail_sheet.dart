@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:taexpense/screens/home_screen.dart';
 import 'package:taexpense/services/master_data_store.dart';
+import 'package:taexpense/services/transaction_service.dart' as TransactionService;
+import 'package:taexpense/session.dart';
+import 'package:taexpense/theme/app_theme.dart';
 import 'package:taexpense/utils/utils.dart';
 import 'package:taexpense/widgets/fina_widgets.dart';
 
@@ -9,11 +13,14 @@ class TransactionDetailSheet extends StatelessWidget {
   final Map<String, dynamic> data;
   final AppLocalizations t;
   final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  
 
   const TransactionDetailSheet({
     required this.data,
     required this.t,
     required this.onEdit,
+    required this.onDelete,
   });
 
   @override
@@ -177,9 +184,33 @@ class TransactionDetailSheet extends StatelessWidget {
     );
   }
 
-  void _confirmDelete(BuildContext context) {
-    // TODO: thêm confirm dialog rồi gọi delete API
-    Navigator.pop(context);
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Xoá giao dịch',
+            style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700)),
+        content: Text('Bạn có chắc muốn xoá giao dịch này không?',
+            style: GoogleFonts.dmSans()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Huỷ', style: GoogleFonts.dmSans(color: kSubtext)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true), // ← trả true
+            child: Text('Xoá',
+                style: GoogleFonts.dmSans(
+                    color: kError, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    onDelete(); // ← gọi callback, logic xử lý ở parent
   }
   
 }

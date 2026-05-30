@@ -151,13 +151,17 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     }
 
     // 4. Xây dựng nội dung text
-    final typeIcon = d.type == 0 ? '**${t.expense}**' : '**${t.income}**';
+    final typeIcon = d.type == AppConstants.TRANSFER
+        ? '**${t.transfer}**'
+        : d.type == AppConstants.EXPENSE
+            ? '**${t.expense}**'
+            : '**${t.income}**';
     
     // Hiển thị dạng: 8.00 S$ hoặc 200,000 ₫
     final botText = '$typeIcon\n'
         '${t.amount}: **$amtFmt $symbol**\n'
         '${t.content}: ${d.content}\n'
-        '${d.content != null && d.content!.isNotEmpty ? '${t.location}: **${d.content}**\n' : ''}';
+        '${d.note != null && d.note!.isNotEmpty ? '${t.location}: **${d.note}**\n' : ''}';
     
     return botText;
   }
@@ -228,32 +232,42 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           ),
         ),
         body: SafeArea(
-          child: Column(children: [
-            Expanded(
-              child: ListView.builder(
-                controller: _scroll,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                itemCount: _msgs.length,
-                itemBuilder: (_, i) => _BubbleWidget(
-                    msg: _msgs[i],
-                    onConfirm: (r) {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  CreateTransactionScreen(prefill: r.data)));
-                    }),
+          child: Stack(children: [
+            Column(children: [
+              Expanded(
+                child: ListView.builder(
+                  controller: _scroll,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  itemCount: _msgs.length,
+                  itemBuilder: (_, i) => _BubbleWidget(
+                      msg: _msgs[i],
+                      onConfirm: (r) {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    CreateTransactionScreen(prefill: r.data)));
+                      }),
+                ),
               ),
-            ),
-            _InputBar(
-              ctrl: _textCtrl,
-              hint: t.chatInputHint,
-              listeningText: t.listeningText,
-              listening: _listening,
-              micAnim: _micAnim,
-              onSend: () => _send(_textCtrl.text),
-              onMic: _toggleMic,
+              _InputBar(
+                ctrl: _textCtrl,
+                hint: t.chatInputHint,
+                listeningText: t.listeningText,
+                listening: _listening,
+                micAnim: _micAnim,
+                onSend: () => _send(_textCtrl.text),
+              ),
+            ]),
+            Positioned(
+              right: 18,
+              bottom: _listening ? 112 : 78,
+              child: _RobotMicButton(
+                listening: _listening,
+                micAnim: _micAnim,
+                onTap: _toggleMic,
+              ),
             ),
           ]),
         ),
@@ -460,13 +474,12 @@ class _InputBar extends StatelessWidget {
   final bool listening;
   final String hint, listeningText;
   final AnimationController micAnim;
-  final VoidCallback onSend, onMic;
+  final VoidCallback onSend;
   const _InputBar(
       {required this.ctrl,
       required this.listening,
       required this.micAnim,
       required this.onSend,
-      required this.onMic, 
       required this.hint,
       required this.listeningText});
 
@@ -536,39 +549,77 @@ class _InputBar extends StatelessWidget {
                   child: const Icon(Icons.send_rounded,
                       color: Colors.white, size: 18)),
             ),
-            const SizedBox(width: 10),
-            // Mic button
-            GestureDetector(
-              onTap: onMic,
-              child: AnimatedBuilder(
-                animation: micAnim,
-                builder: (_, __) => Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: listening
-                        ? Color.lerp(
-                            kError, const Color(0xFFFF6B6B), micAnim.value)!
-                        : kPrimary.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: listening
-                        ? [
-                            BoxShadow(
-                                color: kError
-                                    .withOpacity(0.3 + micAnim.value * 0.2),
-                                blurRadius: 12 + micAnim.value * 8,
-                                spreadRadius: 2)
-                          ]
-                        : [],
-                  ),
-                  child: Icon(
-                      listening ? Icons.mic_rounded : Icons.mic_none_rounded,
-                      color: listening ? Colors.white : kPrimary,
-                      size: 24),
-                ),
-              ),
-            ),
           ]),
         ]),
+      );
+}
+
+class _RobotMicButton extends StatelessWidget {
+  final bool listening;
+  final AnimationController micAnim;
+  final VoidCallback onTap;
+
+  const _RobotMicButton({
+    required this.listening,
+    required this.micAnim,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: AnimatedBuilder(
+          animation: micAnim,
+          builder: (_, __) {
+            final glow = listening ? micAnim.value : 0.0;
+            return Transform.translate(
+              offset: Offset(0, listening ? -2 * glow : 0),
+              child: Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  color: listening
+                      ? Color.lerp(kError, const Color(0xFFFF6B6B), glow)!
+                      : kPrimary,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: (listening ? kError : kPrimary)
+                          .withValues(
+                              alpha: listening ? 0.28 + glow * 0.18 : 0.26),
+                      blurRadius: listening ? 18 + glow * 10 : 16,
+                      offset: const Offset(0, 8),
+                      spreadRadius: listening ? 2 : 0,
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    const Icon(Icons.smart_toy_rounded,
+                        color: Colors.white, size: 30),
+                    Positioned(
+                      right: 13,
+                      bottom: 13,
+                      child: Container(
+                        width: 13,
+                        height: 13,
+                        decoration: BoxDecoration(
+                          color: listening ? Colors.white : kBg,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.mic_rounded,
+                          color: listening ? kError : kPrimary,
+                          size: 9,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
       );
 }

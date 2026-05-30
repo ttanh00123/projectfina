@@ -10,6 +10,7 @@ import 'package:taexpense/screens/edit_transaction_screen.dart';
 import 'package:taexpense/screens/transaction_detail_sheet.dart';
 import 'package:taexpense/screens/wallet_list_screen.dart';
 import 'package:taexpense/services/master_data_store.dart';
+import 'package:taexpense/services/transaction_service.dart' as TransactionService;
 import 'package:taexpense/session.dart';
 import 'package:taexpense/utils/material_icons_map.dart';
 import 'package:taexpense/utils/utils.dart';
@@ -350,11 +351,46 @@ class _DashboardPageState extends State<_DashboardPage> {
 
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
+      isScrollControlled: true,        // ← cho phép control height
+      useRootNavigator: true,          // ← tránh bị chặn bởi bottom nav
       backgroundColor: Colors.transparent,
       builder: (_) => TransactionDetailSheet(
         data: value,
         t: t,
+        onDelete: () async {
+          Navigator.pop(context); // đóng bottom sheet trước
+          try {
+            await TransactionService.deleteTransaction(
+                value['id'], Session.token!);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Đã xoá giao dịch',
+                    style: GoogleFonts.dmSans(fontWeight: FontWeight.w600)),
+                backgroundColor: kError,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ));
+              
+              _loadPeriodAndFetch();
+              
+            }
+          } on ApiException catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(e.message),
+                backgroundColor: kError,
+              ));
+            }
+          } catch (_) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Không thể kết nối server.'),
+                backgroundColor: kError,
+              ));
+            }
+          }
+        },
         onEdit: () {
           Navigator.pop(context);
           Navigator.push(
@@ -554,6 +590,7 @@ class _BalanceCard extends StatelessWidget {
   void _showPeriodPicker(BuildContext context, AppLocalizations t) {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,          // ← tránh bị chặn bởi bottom nav
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (_) => SafeArea(

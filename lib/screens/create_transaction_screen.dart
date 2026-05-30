@@ -598,7 +598,9 @@ class _AmountField extends StatelessWidget {
 
     final result = await showModalBottomSheet<String>(
       context: context,
-      isScrollControlled: true,
+      useSafeArea: true, 
+      isScrollControlled: true, 
+      useRootNavigator: true,          // ← tránh bị chặn bởi bottom nav
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),

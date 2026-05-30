@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:taexpense/app_constants.dart';
 import 'package:taexpense/screens/edit_transaction_screen.dart';
 import 'package:taexpense/screens/transaction_detail_sheet.dart';
+import 'package:taexpense/services/transaction_service.dart' as TransactionService;
 import 'package:taexpense/utils/material_icons_map.dart';
 import 'package:taexpense/utils/utils.dart';
 import 'package:taexpense/widgets/fina_widgets.dart';
@@ -421,7 +422,9 @@ class _TxnTileState extends State<_TxnTile> {
     final t = AppLocalizations.of(context)!;   // ← context đúng, từ State
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
+      useSafeArea: true, 
+      isScrollControlled: true, 
+      useRootNavigator: true,          // ← tránh bị chặn bởi bottom nav
       backgroundColor: Colors.transparent,
       builder: (_) => TransactionDetailSheet(
         data: widget.txn,
@@ -436,6 +439,40 @@ class _TxnTileState extends State<_TxnTile> {
               ),
             ),
           ).then((_) => widget.onRefresh()); // refresh sau khi edit xong
+        }, 
+        onDelete: () async {
+          Navigator.pop(context); // đóng bottom sheet trước
+          try {
+            await TransactionService.deleteTransaction(
+                widget.txn['id'], Session.token!);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Đã xoá giao dịch',
+                    style: GoogleFonts.dmSans(fontWeight: FontWeight.w600)),
+                backgroundColor: kError,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ));
+              
+              // _loadPeriodAndFetch();
+              
+            }
+          } on TransactionService.ApiException catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(e.message),
+                backgroundColor: kError,
+              ));
+            }
+          } catch (_) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Không thể kết nối server.'),
+                backgroundColor: kError,
+              ));
+            }
+          }
         },
       ),
     );

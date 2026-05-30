@@ -60,6 +60,9 @@ class BillImagePicker extends StatelessWidget {
   void _showSourcePicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      useRootNavigator: true,          // ← tránh bị chặn bởi bottom nav
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (_) => SafeArea(

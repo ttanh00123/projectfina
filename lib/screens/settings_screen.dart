@@ -241,6 +241,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       useSafeArea: true, 
       isScrollControlled: true, 
+      useRootNavigator: true,          // ← tránh bị chặn bởi bottom nav
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       builder: (_) => SafeArea(
         child: Column(
