@@ -20,7 +20,7 @@ import '../widgets/fina_widgets.dart';
 import 'chat_screen.dart';
 import 'history_screen.dart';
 import 'settings_screen.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:taexpense/l10n/app_localizations.dart';
 
 // ── Period enum ────────────────────────────────────────────────────────────────
 enum _Period { month, quarter, year }

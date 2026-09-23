@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:taexpense/theme/app_theme.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:taexpense/l10n/app_localizations.dart';
 
 class TagsInputField extends StatefulWidget {
   final List<String> tags;

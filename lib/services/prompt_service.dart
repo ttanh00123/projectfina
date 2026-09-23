@@ -8,24 +8,47 @@ import 'package:taexpense/models/prompt_result.dart';
 import 'package:taexpense/services/settings_service.dart';
 import 'package:taexpense/utils/utils.dart';
 
-Future<PromptResult> sendPrompt(String text, int userId, String token) async {
-  final r = await http
-      .post(
-        Uri.parse(AppConstants.PROMPT_API),
-        headers: Utils.buildRequestHeader(token),
-        body: jsonEncode({
-          "text": text,
-          "user_id": userId,
-          "currency": await SettingsService.getCurrency(),
-          "language_code": await SettingsService.getLocale(),
-        }),
-      )
-      .timeout(const Duration(seconds: 30));
-  if (r.statusCode == StatusCode.OK) {
-    return PromptResult.fromJson(jsonDecode(r.body));
-  }
-  // return Future.error(ApiException(Utils.extractError(r), statusCode: r.statusCode));
-  throw ApiException(Utils.extractError(r), statusCode: r.statusCode);
+import 'package:taexpense/services/local_transaction_parser.dart';
+
+Future<PromptResult?> sendPrompt(String text, int userId, String token) async {
+  final currency = await SettingsService.getCurrency();
+  final languageCode = await SettingsService.getLocale();
+
+  // 1. Local-First Parser (Chạy trực tiếp offline trên thiết bị, tức thì < 5ms)
+  final localResult = LocalTransactionParser.parse(
+    text,
+    defaultCurrency: currency,
+    locale: languageCode,
+  );
+  // if (localResult != null) {
+    return localResult;
+  // }
+
+  // 2. Fallback sang backend LLM nếu câu phức tạp vượt quá khả năng bóc tách offline
+  // try {
+  //   final r = await http
+  //       .post(
+  //         Uri.parse(AppConstants.PROMPT_API),
+  //         headers: Utils.buildRequestHeader(token),
+  //         body: jsonEncode({
+  //           "text": text,
+  //           "user_id": userId,
+  //           "currency": currency,
+  //           "language_code": languageCode,
+  //         }),
+  //       )
+  //       .timeout(const Duration(seconds: 30));
+  //   if (r.statusCode == StatusCode.OK) {
+  //     return PromptResult.fromJson(jsonDecode(r.body));
+  //   }
+  //   throw ApiException(Utils.extractError(r), statusCode: r.statusCode);
+  // } catch (e) {
+  //   // Nếu mất mạng hoặc API lỗi, thử lại fallback cục bộ với best-effort
+  //   if (localResult != null) {
+  //     return localResult;
+  //   }
+  //   rethrow;
+  // }
 
 // Fake AI response for testing
   // var dummy = '''{

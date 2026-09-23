@@ -19,7 +19,7 @@ import 'package:taexpense/widgets/tags_input_field.dart';
 import '../theme/app_theme.dart';
 import '../widgets/fina_widgets.dart';
 import 'package:taexpense/utils/material_icons_map.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import '../l10n/app_localizations.dart';
 
 class CreateTransactionScreen extends StatefulWidget {
   final int initialType; // ← thêm vào
@@ -94,6 +94,16 @@ class _CreateTransactionScreenState extends State<CreateTransactionScreen> {
       if (p.wallet != null) {
         _fromWallet = _wallets.where((w) => w.id == p.wallet!.id).firstOrNull ??
             _fromWallet;
+      }
+
+      // Resolve toWallet từ prefill (cho giao dịch chuyển khoản)
+      if (p.toWallet != null) {
+        _toWallet = _wallets.where((w) => w.id == p.toWallet!.id).firstOrNull ??
+            _toWallet;
+      }
+      if (p.receiveAmount != null && p.receiveAmount! > 0) {
+        _receiveAmountCtrl.text = p.receiveAmount!.toStringAsFixed(
+            p.receiveAmount! % 1 == 0 ? 0 : 2);
       }
 
       // Resolve category từ prefill

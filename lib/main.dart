@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:taexpense/l10n/app_localizations.dart';
 import 'package:taexpense/utils/app_config.dart';
 import 'package:taexpense/screens/home_screen.dart';
 import 'package:taexpense/screens/login_screen.dart';

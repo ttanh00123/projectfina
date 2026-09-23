@@ -4,3 +4,7 @@ output-localization-file: app_localizations.dart
 output-class: AppLocalizations
 preferred-supported-locales: [vi, en]
 untranslated-messages-file: desiredFileName.txt
+
+# Thêm 2 dòng này để tắt gói ảo và chỉ định nơi xuất file
+synthetic-package: false
+output-dir: lib/l10n

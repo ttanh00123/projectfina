@@ -1,6 +1,6 @@
 // lib/utils/wallet_type_l10n.dart
 
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:taexpense/l10n/app_localizations.dart';
 
 extension WalletTypeL10n on AppLocalizations {
   String translateKey(String key) {

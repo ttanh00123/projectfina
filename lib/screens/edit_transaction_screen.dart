@@ -16,7 +16,7 @@ import 'package:taexpense/widgets/tags_input_field.dart';
 import '../theme/app_theme.dart';
 import '../widgets/fina_widgets.dart';
 import 'package:taexpense/utils/material_icons_map.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:taexpense/l10n/app_localizations.dart';
 
 class EditTransactionScreen extends StatefulWidget {
   final int transactionId;

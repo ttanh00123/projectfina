@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:taexpense/l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:taexpense/screens/home_screen.dart';
 import 'package:taexpense/services/master_data_store.dart';

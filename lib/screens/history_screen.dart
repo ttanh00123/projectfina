@@ -11,7 +11,7 @@ import 'package:taexpense/widgets/fina_widgets.dart';
 import '../services/transaction_service.dart';
 import '../session.dart';
 import '../theme/app_theme.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:taexpense/l10n/app_localizations.dart';
 
 // ── Filter preset ──────────────────────────────────────────────────────────────
 

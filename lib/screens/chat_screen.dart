@@ -11,7 +11,7 @@ import 'package:taexpense/utils/utils.dart';
 import '../models/user_model.dart';
 import '../theme/app_theme.dart';
 import 'create_transaction_screen.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import '../l10n/app_localizations.dart';
 
 // ── Message model ─────────────────────────────────────────────────────────────
 class _Msg {
@@ -114,18 +114,15 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     try {
       final result = await sendPrompt(t, userId!, token);
       _removeLoading();
-      final d = result.data;
-      // final amtFmt = NumberFormat('#,##0', 'vi_VN').format(d.amount);
       
-      // // final dtFormatted = _formatDt(d.dateTime);
-      // final botText = '${d.type == 0 ? '🛒 **Chi tiêu**' : '💰 **Thu nhập**'}\n'
-      //     'Số tiền: **$amtFmt ${d.currency}**\n'
-      //     '${d.address != null ? 'Địa điểm: **${d.address}**\n' : ''}';
-      // 'Ví: ${d.wallet}\n'
-      // 'Thời gian: $dtFormatted';
-
-      final botText = formatTransactionText(d);
-      _addBot(botText, result: result);
+      if (result == null) {
+        _addBot('❌ Cannot parse the transaction. Please try again.');
+        return;
+      }else {
+        // Nếu có dữ liệu transaction, hiển thị thông tin chi tiết
+        final botText = formatTransactionText(result.data);
+        _addBot(botText, result: result);
+      }
     } on ApiException catch (e) {
       _removeLoading();
       _addBot('❌ Error: ${e.message}');

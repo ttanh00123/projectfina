@@ -12,7 +12,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
     
-  intl: ^0.19.0
+  intl: ^0.20.0
   firebase_core: ^3.6.0
   firebase_messaging: ^15.1.3
   shared_preferences: ^2.2.2
@@ -35,6 +35,7 @@ dependencies:
   path_provider: ^2.1.3
   path: ^1.9.0
   http_parser: ^4.0.2
+  flutter_gen: ^5.15.0
 
 dev_dependencies:
   flutter_test:
@@ -45,6 +46,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  generate: true
+  generate: true  # Automatically generate localization files based on the l10n.yaml configuration
   assets:
     - assets/icon/
