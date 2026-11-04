@@ -6,6 +6,7 @@ import 'package:speech_to_text/speech_to_text.dart';
 import 'package:taexpense/app_constants.dart';
 import 'package:taexpense/models/prompt_result.dart';
 import 'package:taexpense/services/prompt_service.dart';
+import 'package:taexpense/services/master_data_store.dart';
 import 'package:taexpense/session.dart';
 import 'package:taexpense/utils/utils.dart';
 import '../models/user_model.dart';
@@ -114,11 +115,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     try {
       final result = await sendPrompt(t, userId!, token);
       _removeLoading();
-      
+
       if (result == null) {
         _addBot('❌ Cannot parse the transaction. Please try again.');
         return;
-      }else {
+      } else {
         // Nếu có dữ liệu transaction, hiển thị thông tin chi tiết
         final botText = formatTransactionText(result.data);
         _addBot(botText, result: result);
@@ -135,6 +136,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   String formatTransactionText(dynamic d) {
     // 2. Xác định symbol, nếu không có trong map thì dùng chính mã currency
     final symbol = kCurrencySymbols[d.currency] ?? d.currency;
+    final categoryName = MasterDataStore()
+            .categories
+            .where((category) => category.id == d.category)
+            .firstOrNull
+            ?.name ??
+        '-';
 
     // 3. Logic định dạng số tiền
     String amtFmt;
@@ -153,13 +160,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         : d.type == AppConstants.EXPENSE
             ? '**${t.expense}**'
             : '**${t.income}**';
-    
+
     // Hiển thị dạng: 8.00 S$ hoặc 200,000 ₫
     final botText = '$typeIcon\n'
         '${t.amount}: **$amtFmt $symbol**\n'
+        '${t.category}: **$categoryName**\n'
         '${t.content}: ${d.content}\n'
         '${d.note != null && d.note!.isNotEmpty ? '${t.location}: **${d.note}**\n' : ''}';
-    
+
     return botText;
   }
 
@@ -201,74 +209,74 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: kBg,
-        appBar: AppBar(
-          title: Row(children: [
-            Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                    color: kPrimary, borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Icons.smart_toy_rounded,
-                    color: Colors.white, size: 18)),
-            const SizedBox(width: 10),
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(t.chatbotName,
-                  style: GoogleFonts.spaceGrotesk(
-                      fontSize: 15, fontWeight: FontWeight.w700, color: kText)),
-              Text('AI powered',
-                  style: GoogleFonts.dmSans(fontSize: 11, color: kPrimary)),
-            ]),
+      backgroundColor: kBg,
+      appBar: AppBar(
+        title: Row(children: [
+          Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                  color: kPrimary, borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.smart_toy_rounded,
+                  color: Colors.white, size: 18)),
+          const SizedBox(width: 10),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(t.chatbotName,
+                style: GoogleFonts.spaceGrotesk(
+                    fontSize: 15, fontWeight: FontWeight.w700, color: kText)),
+            Text('AI powered',
+                style: GoogleFonts.dmSans(fontSize: 11, color: kPrimary)),
           ]),
-          backgroundColor: Colors.white,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                size: 20, color: kText),
-            onPressed: () => Navigator.pop(context),
-          ),
+        ]),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded,
+              size: 20, color: kText),
+          onPressed: () => Navigator.pop(context),
         ),
-        body: SafeArea(
-          child: Stack(children: [
-            Column(children: [
-              Expanded(
-                child: ListView.builder(
-                  controller: _scroll,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  itemCount: _msgs.length,
-                  itemBuilder: (_, i) => _BubbleWidget(
-                      msg: _msgs[i],
-                      onConfirm: (r) {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) =>
-                                    CreateTransactionScreen(prefill: r.data)));
-                      }),
-                ),
-              ),
-              _InputBar(
-                ctrl: _textCtrl,
-                hint: t.chatInputHint,
-                listeningText: t.listeningText,
-                listening: _listening,
-                micAnim: _micAnim,
-                onSend: () => _send(_textCtrl.text),
-              ),
-            ]),
-            Positioned(
-              right: 18,
-              bottom: _listening ? 112 : 78,
-              child: _RobotMicButton(
-                listening: _listening,
-                micAnim: _micAnim,
-                onTap: _toggleMic,
+      ),
+      body: SafeArea(
+        child: Stack(children: [
+          Column(children: [
+            Expanded(
+              child: ListView.builder(
+                controller: _scroll,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                itemCount: _msgs.length,
+                itemBuilder: (_, i) => _BubbleWidget(
+                    msg: _msgs[i],
+                    onConfirm: (r) {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  CreateTransactionScreen(prefill: r.data)));
+                    }),
               ),
             ),
+            _InputBar(
+              ctrl: _textCtrl,
+              hint: t.chatInputHint,
+              listeningText: t.listeningText,
+              listening: _listening,
+              micAnim: _micAnim,
+              onSend: () => _send(_textCtrl.text),
+            ),
           ]),
-        ),
-      );
+          Positioned(
+            right: 18,
+            bottom: _listening ? 112 : 78,
+            child: _RobotMicButton(
+              listening: _listening,
+              micAnim: _micAnim,
+              onTap: _toggleMic,
+            ),
+          ),
+        ]),
+      ),
+    );
   }
 }
 
@@ -581,9 +589,8 @@ class _RobotMicButton extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: (listening ? kError : kPrimary)
-                          .withValues(
-                              alpha: listening ? 0.28 + glow * 0.18 : 0.26),
+                      color: (listening ? kError : kPrimary).withValues(
+                          alpha: listening ? 0.28 + glow * 0.18 : 0.26),
                       blurRadius: listening ? 18 + glow * 10 : 16,
                       offset: const Offset(0, 8),
                       spreadRadius: listening ? 2 : 0,

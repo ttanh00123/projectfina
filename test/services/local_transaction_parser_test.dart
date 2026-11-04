@@ -1,8 +1,148 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taexpense/app_constants.dart';
+import 'package:taexpense/models/category.dart';
+import 'package:taexpense/services/master_data_store.dart';
 import 'package:taexpense/services/local_transaction_parser.dart';
 
 void main() {
+  setUpAll(() {
+    MasterDataStore().categories = const [
+      Category(
+          id: 1,
+          name: 'Lương',
+          icon: 'payments',
+          type: 1,
+          sortOrder: 1,
+          keywords: ['luong', 'salary', 'paycheck', 'wage']),
+      Category(
+          id: 2,
+          name: 'Thưởng',
+          icon: 'card_giftcard',
+          type: 1,
+          sortOrder: 2,
+          keywords: ['thuong', 'bonus', 'reward']),
+      Category(
+          id: 9,
+          name: 'Ăn uống',
+          icon: 'restaurant',
+          type: 0,
+          sortOrder: 1,
+          keywords: [
+            'cafe',
+            'ca phe',
+            'coffee',
+            'kopi',
+            'pho',
+            'bun',
+            'com',
+            'banh mi',
+            'an trua',
+            'an toi',
+            'an sang',
+            'an',
+            'uong',
+            'lunch',
+            'dinner',
+            'breakfast',
+            'food',
+            'drink',
+            'vit quay',
+            'food court'
+          ]),
+      Category(
+          id: 10,
+          name: 'Đi lại',
+          icon: 'directions_car',
+          type: 0,
+          sortOrder: 2,
+          keywords: ['grab', 'taxi', 'bus', 'transport', 'ride', 'fare']),
+      Category(
+          id: 12,
+          name: 'Internet',
+          icon: 'wifi',
+          type: 0,
+          sortOrder: 4,
+          keywords: ['tien mang', 'internet', 'wifi', 'broadband']),
+      Category(
+          id: 13,
+          name: 'Xăng dầu',
+          icon: 'local_gas_station',
+          type: 0,
+          sortOrder: 5,
+          keywords: [
+            'do xang',
+            'xang dau',
+            'xang',
+            'fuel',
+            'petrol',
+            'gasoline'
+          ]),
+      Category(
+          id: 15,
+          name: 'Trang phục',
+          icon: 'checkroom',
+          type: 0,
+          sortOrder: 7,
+          keywords: ['quan ao', 'ao', 'clothing', 'shirt', 'dress']),
+      Category(
+          id: 23,
+          name: 'Tập luyện',
+          icon: 'fitness_center',
+          type: 0,
+          sortOrder: 15,
+          keywords: ['tap luyen', 'gym', 'fitness', 'workout']),
+      Category(
+          id: 28,
+          name: 'Tiền nhà',
+          icon: 'home',
+          type: 0,
+          sortOrder: 20,
+          keywords: [
+            'tien nha',
+            'tien phong',
+            'thue nha',
+            'rent',
+            'house rent',
+            'apartment'
+          ]),
+      Category(
+          id: 29,
+          name: 'Tiền điện',
+          icon: 'bolt',
+          type: 0,
+          sortOrder: 21,
+          keywords: ['tien dien', 'dien luc', 'electricity', 'electric bill']),
+      Category(
+          id: 31,
+          name: 'Học phí',
+          icon: 'school',
+          type: 0,
+          sortOrder: 23,
+          keywords: [
+            'hoc phi',
+            'tien hoc',
+            'khoa hoc',
+            'tuition',
+            'school fee',
+            'course'
+          ]),
+      Category(
+          id: 34,
+          name: 'Khác',
+          icon: 'other',
+          type: 0,
+          sortOrder: 26,
+          keywords: ['khac', 'other']),
+      Category(
+          id: 35,
+          name: 'Khác',
+          icon: 'other',
+          type: 1,
+          sortOrder: 27,
+          keywords: ['thu khac', 'other income']),
+    ];
+  });
+
   group('LocalTransactionParser - Vietnamese Expenses', () {
     test('parses explicit verb expense with location', () {
       final result = LocalTransactionParser.parse(
@@ -50,6 +190,17 @@ void main() {
       expect(data.amount, equals(30000.0));
       expect(data.category, equals(9));
       expect(data.content?.toLowerCase(), contains('cafe'));
+    });
+
+    test('parses roasted duck as food and drink', () {
+      final result = LocalTransactionParser.parse(
+        'Mua vịt quay lò đúc 180k',
+        defaultCurrency: 'VND',
+        locale: 'vi',
+      );
+
+      expect(result, isNotNull);
+      expect(result!.data.category, equals(9)); // Food & Drink
     });
 
     test('parses transport expenses', () {
@@ -146,14 +297,16 @@ void main() {
       final resHomKia = LocalTransactionParser.parse('Cafe 35k hôm kia');
       expect(resHomKia, isNotNull);
       final d1 = DateTime.parse(resHomKia!.data.dateTime);
-      expect(d1.day, equals(DateTime.now().subtract(const Duration(days: 2)).day));
+      expect(
+          d1.day, equals(DateTime.now().subtract(const Duration(days: 2)).day));
 
       final res2Ngay = LocalTransactionParser.parse('Mua áo 250k 2 ngày trước');
       expect(res2Ngay, isNotNull);
       expect(res2Ngay!.data.amount, equals(250000.0));
       expect(res2Ngay.data.category, equals(15)); // Clothing
       final d2 = DateTime.parse(res2Ngay.data.dateTime);
-      expect(d2.day, equals(DateTime.now().subtract(const Duration(days: 2)).day));
+      expect(
+          d2.day, equals(DateTime.now().subtract(const Duration(days: 2)).day));
     });
 
     test('parses internet and gym categories', () {

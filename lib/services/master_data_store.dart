@@ -7,14 +7,14 @@ import 'package:taexpense/models/wallet_model.dart';
 import 'package:taexpense/services/master_data_service.dart';
 
 class MasterDataStore {
-  static const _keyJson     = 'master_data_json';
-  static const _keyMd5      = 'master_data_md5';
-  static const _keyRecentTags = 'recent_tags';   // thêm
+  static const _keyJson = 'master_data_json';
+  static const _keyMd5 = 'master_data_md5';
+  static const _keyRecentTags = 'recent_tags'; // thêm
 
-  List<WalletModel> wallets    = [];
-  List<Category>    categories = [];
-  List<String>      recentTags = [];  // thêm — dùng cho TagsInputField
-  String?           _cachedMd5;
+  List<WalletModel> wallets = [];
+  List<Category> categories = [];
+  List<String> recentTags = []; // thêm — dùng cho TagsInputField
+  String? _cachedMd5;
 
   static final MasterDataStore _instance = MasterDataStore._();
   factory MasterDataStore() => _instance;
@@ -22,12 +22,13 @@ class MasterDataStore {
 
   // ── Load từ Prefs → parse thành Object ────────────────────────────────────
 
-  Future<void> loadFromCache() async {
-    final prefs   = await SharedPreferences.getInstance();
+  Future<void> loadFromCache({String locale = 'vi'}) async {
+    final prefs = await SharedPreferences.getInstance();
     final jsonStr = prefs.getString(_keyJson);
-    _cachedMd5    = prefs.getString(_keyMd5);
+    _cachedMd5 = prefs.getString(_keyMd5);
     if (jsonStr != null) {
-      _parseAndStore(jsonDecode(jsonStr) as Map<String, dynamic>);
+      _parseAndStore(jsonDecode(jsonStr) as Map<String, dynamic>,
+          locale: locale);
     }
     // Load recent tags
     final tagsJson = prefs.getString(_keyRecentTags);
@@ -36,12 +37,15 @@ class MasterDataStore {
     }
   }
 
-  void _parseAndStore(Map<String, dynamic> data) {
+  void _parseAndStore(Map<String, dynamic> data, {String locale = 'vi'}) {
     wallets = (data['wallets'] as List)
         .map((j) => WalletModel.fromJson(j as Map<String, dynamic>))
         .toList();
     categories = (data['categories'] as List)
-        .map((j) => Category.fromJson(j as Map<String, dynamic>))
+        .map((j) => Category.fromJson(
+              j as Map<String, dynamic>,
+              locale: locale,
+            ))
         .toList();
   }
 
@@ -51,16 +55,16 @@ class MasterDataStore {
     final result = await MasterDataService.sync(
       authToken: authToken,
       clientMd5: _cachedMd5,
-      locale:    locale,   // thêm
+      locale: locale, // thêm
     );
 
     if (!(result['changed'] as bool? ?? false)) return false;
 
-    _parseAndStore(result['data'] as Map<String, dynamic>);
+    _parseAndStore(result['data'] as Map<String, dynamic>, locale: locale);
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyJson, jsonEncode(result['data']));
-    await prefs.setString(_keyMd5,  result['md5'] as String);
+    await prefs.setString(_keyMd5, result['md5'] as String);
     _cachedMd5 = result['md5'] as String;
 
     return true;
@@ -71,10 +75,7 @@ class MasterDataStore {
   Future<void> addRecentTags(List<String> tags) async {
     if (tags.isEmpty) return;
     // Merge, dedup, giữ tối đa 30 tags gần nhất
-    final merged = [...tags, ...recentTags]
-        .toSet()
-        .take(30)
-        .toList();
+    final merged = [...tags, ...recentTags].toSet().take(30).toList();
     recentTags = merged;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyRecentTags, jsonEncode(recentTags));
@@ -87,7 +88,7 @@ class MasterDataStore {
     await prefs.remove(_keyJson);
     await prefs.remove(_keyMd5);
     await prefs.remove(_keyRecentTags);
-    wallets    = [];
+    wallets = [];
     categories = [];
     recentTags = [];
     _cachedMd5 = null;
@@ -98,28 +99,32 @@ class MasterDataStore {
   WalletModel? resolveWallet(String hint) {
     final h = hint.toLowerCase();
     return wallets
-        .where((w) => w.name.toLowerCase().contains(h)
-                   || h.contains(w.name.toLowerCase()))
+        .where((w) =>
+            w.name.toLowerCase().contains(h) ||
+            h.contains(w.name.toLowerCase()))
         .firstOrNull;
   }
 
   Category? resolveCategory(String hint, {int? type}) {
-    final h    = hint.toLowerCase();
-    final pool = categories.where((c) =>
-        type == null || c.type == type || c.type == 2);
+    final h = hint.toLowerCase();
+    final pool =
+        categories.where((c) => type == null || c.type == type || c.type == 2);
     return pool
-        .where((c) => c.name.toLowerCase().contains(h)
-                   || h.contains(c.name.toLowerCase()))
+        .where((c) =>
+            c.name.toLowerCase().contains(h) ||
+            h.contains(c.name.toLowerCase()))
         .firstOrNull;
   }
 
   // ── Display name helpers ───────────────────────────────────────────────────
 
-  String categoryName(int? id) =>
-      id == null ? '-' : MasterDataStore().categories.firstWhere((c) => c.id == id).name;
+  String categoryName(int? id) => id == null
+      ? '-'
+      : MasterDataStore().categories.firstWhere((c) => c.id == id).name;
 
-  String walletName(int? id) =>
-      id == null ? '-' : MasterDataStore().wallets.firstWhere((w) => w.id == id).name;
+  String walletName(int? id) => id == null
+      ? '-'
+      : MasterDataStore().wallets.firstWhere((w) => w.id == id).name;
 
   // Category? get categoryName(int id) {
   //   if (id == null) return null;

@@ -118,9 +118,15 @@ class LocalTransactionParser {
       var year = int.tryParse(explicitMatch.group(3) ?? '') ?? now.year;
       if (year < 100) year += 2000;
 
-      if (day != null && month != null && day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+      if (day != null &&
+          month != null &&
+          day >= 1 &&
+          day <= 31 &&
+          month >= 1 &&
+          month <= 12) {
         detectedDate = DateTime(year, month, day, now.hour, now.minute);
-        working = working.replaceRange(explicitMatch.start, explicitMatch.end, ' ');
+        working =
+            working.replaceRange(explicitMatch.start, explicitMatch.end, ' ');
       }
     }
 
@@ -128,12 +134,16 @@ class LocalTransactionParser {
       final normalized = _removeDiacritics(working.toLowerCase());
 
       // B. N days ago: 2 ngày trước, 3 ngay truoc, 2 days ago
-      final nDaysAgoRegex = RegExp(r'\b(\d+)\s*(?:ngày trước|ngay truoc|days ago)\b');
+      final nDaysAgoRegex =
+          RegExp(r'\b(\d+)\s*(?:ngày trước|ngay truoc|days ago)\b');
       final nDaysMatch = nDaysAgoRegex.firstMatch(normalized);
       if (nDaysMatch != null) {
         final days = int.tryParse(nDaysMatch.group(1) ?? '') ?? 0;
         detectedDate = now.subtract(Duration(days: days));
-        working = working.replaceFirst(RegExp(r'\b' + RegExp.escape(nDaysMatch.group(0)!) + r'\b', caseSensitive: false), ' ');
+        working = working.replaceFirst(
+            RegExp(r'\b' + RegExp.escape(nDaysMatch.group(0)!) + r'\b',
+                caseSensitive: false),
+            ' ');
       }
     }
 
@@ -192,7 +202,8 @@ class LocalTransactionParser {
   // 2. AMOUNT & CURRENCY EXTRACTION
   // ─────────────────────────────────────────────────────────────────────────────
 
-  static _AmountExtractionResult? _extractAmount(String text, String defaultCurrency) {
+  static _AmountExtractionResult? _extractAmount(
+      String text, String defaultCurrency) {
     // Pattern 1: Currency prefix: $15, S$ 8.50, ₫50,000, €25, £10
     final prefixPattern = RegExp(
       r'(?:^|\s+)(\$|s\$|us\$|a\$|₫|đ|€|£|¥)\s*(\d{1,3}(?:[.,]\d{3})*|\d+)(?:[.,](\d{1,2}))?(?=$|\s|[.,;!?])',
@@ -208,7 +219,8 @@ class LocalTransactionParser {
       final amount = _parseFormattedNumber(intPart, decPart);
       if (amount > 0) {
         final currency = _resolveCurrencyFromSymbol(symbol, defaultCurrency);
-        final remaining = text.replaceRange(prefixMatch.start, prefixMatch.end, ' ');
+        final remaining =
+            text.replaceRange(prefixMatch.start, prefixMatch.end, ' ');
         return _AmountExtractionResult(
           amount: amount,
           currency: currency,
@@ -236,7 +248,8 @@ class LocalTransactionParser {
       final amount = parsedNum * multiplier;
 
       if (amount > 0) {
-        final remaining = text.replaceRange(suffixMatch.start, suffixMatch.end, ' ');
+        final remaining =
+            text.replaceRange(suffixMatch.start, suffixMatch.end, ' ');
         return _AmountExtractionResult(
           amount: amount,
           currency: currency,
@@ -443,10 +456,17 @@ class LocalTransactionParser {
       if (sepMatch != null) {
         fromHint = working.substring(0, sepMatch.start).trim();
         toHint = sepMatch.group(2)?.trim();
-        fromHint = fromHint.replaceFirst(RegExp(r'^(?:từ|tu|from)\s+', caseSensitive: false), '').trim();
-      } else if (normalized.contains('rut') || normalized.contains('withdraw')) {
+        fromHint = fromHint
+            .replaceFirst(
+                RegExp(r'^(?:từ|tu|from)\s+', caseSensitive: false), '')
+            .trim();
+      } else if (normalized.contains('rut') ||
+          normalized.contains('withdraw')) {
         // Rút từ X về tiền mặt
-        fromHint = working.replaceFirst(RegExp(r'^(?:từ|tu|from)\s+', caseSensitive: false), '').trim();
+        fromHint = working
+            .replaceFirst(
+                RegExp(r'^(?:từ|tu|from)\s+', caseSensitive: false), '')
+            .trim();
         toHint = locale == 'en' ? 'cash' : 'tiền mặt';
       }
     }
@@ -461,15 +481,31 @@ class LocalTransactionParser {
     final isEn = locale.toLowerCase().startsWith('en');
     final content = isEn
         ? (_joinNonEmpty([
-            'Transfer',
-            fromWallet != null ? 'from ${fromWallet.name}' : (fromHint != null && fromHint.isNotEmpty ? 'from $fromHint' : null),
-            toWallet != null ? 'to ${toWallet.name}' : (toHint != null && toHint.isNotEmpty ? 'to $toHint' : null),
-          ]) ?? 'Transfer')
+              'Transfer',
+              fromWallet != null
+                  ? 'from ${fromWallet.name}'
+                  : (fromHint != null && fromHint.isNotEmpty
+                      ? 'from $fromHint'
+                      : null),
+              toWallet != null
+                  ? 'to ${toWallet.name}'
+                  : (toHint != null && toHint.isNotEmpty ? 'to $toHint' : null),
+            ]) ??
+            'Transfer')
         : (_joinNonEmpty([
-            'Chuyển khoản',
-            fromWallet != null ? 'từ ${fromWallet.name}' : (fromHint != null && fromHint.isNotEmpty ? 'từ $fromHint' : null),
-            toWallet != null ? 'đến ${toWallet.name}' : (toHint != null && toHint.isNotEmpty ? 'đến $toHint' : null),
-          ]) ?? 'Chuyển khoản');
+              'Chuyển khoản',
+              fromWallet != null
+                  ? 'từ ${fromWallet.name}'
+                  : (fromHint != null && fromHint.isNotEmpty
+                      ? 'từ $fromHint'
+                      : null),
+              toWallet != null
+                  ? 'đến ${toWallet.name}'
+                  : (toHint != null && toHint.isNotEmpty
+                      ? 'đến $toHint'
+                      : null),
+            ]) ??
+            'Chuyển khoản');
 
     final data = TransactionData(
       requestId: 'local-${DateTime.now().microsecondsSinceEpoch}',
@@ -526,7 +562,9 @@ class LocalTransactionParser {
     if (matchedWallet == null) {
       for (final w in wallets) {
         final wName = w.name.toLowerCase();
-        final regex = RegExp(r'(?:^|\s+)' + RegExp.escape(wName) + r'(?=$|\s|[.,;!?])', caseSensitive: false);
+        final regex = RegExp(
+            r'(?:^|\s+)' + RegExp.escape(wName) + r'(?=$|\s|[.,;!?])',
+            caseSensitive: false);
         if (regex.hasMatch(working)) {
           matchedWallet = w;
           working = working.replaceFirst(regex, ' ');
@@ -558,8 +596,12 @@ class LocalTransactionParser {
           (wNameClean.contains('tien mat') || wNameClean.contains('cash'))) {
         return w;
       }
-      if ((cleanHint.contains('bank') || cleanHint.contains('ngan hang') || cleanHint.contains('tai khoan')) &&
-          (wNameClean.contains('bank') || wNameClean.contains('ngan hang') || w.walletType == 'bank')) {
+      if ((cleanHint.contains('bank') ||
+              cleanHint.contains('ngan hang') ||
+              cleanHint.contains('tai khoan')) &&
+          (wNameClean.contains('bank') ||
+              wNameClean.contains('ngan hang') ||
+              w.walletType.nameKey == 'wallet_type.bank')) {
         return w;
       }
     }
@@ -593,7 +635,10 @@ class LocalTransactionParser {
       // Check that it's not a common category word (e.g. "quán cafe" -> cafe is category, not location)
       final normLoc = _removeDiacritics(rawLoc.toLowerCase());
       if (prep.toLowerCase() == 'quán' || prep.toLowerCase() == 'quan') {
-        if (normLoc == 'cafe' || normLoc == 'ca phe' || normLoc == 'an' || normLoc == 'nhau') {
+        if (normLoc == 'cafe' ||
+            normLoc == 'ca phe' ||
+            normLoc == 'an' ||
+            normLoc == 'nhau') {
           // Keep as content
           return _LocationExtractionResult(location: null, remainingText: text);
         }
@@ -664,74 +709,71 @@ class LocalTransactionParser {
   ) {
     final textNorm = _removeDiacritics(content.toLowerCase());
     final fullNorm = fullSentenceNormalized;
+    final categories = MasterDataStore()
+        .categories
+        .where((c) => c.type == type)
+        .toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
-    if (type == AppConstants.INCOME) {
-      for (final entry in _incomeCategoryAliases.entries) {
-        final catId = entry.key;
-        for (final kw in entry.value) {
-          if (_hasWordOrPhrase(textNorm, kw) || _hasWordOrPhrase(fullNorm, kw)) {
-            return catId;
-          }
-        }
-      }
-      return 35; // Default Other Income
-    }
+    var bestCategoryId = type == AppConstants.INCOME ? 35 : 34;
+    var bestScore = 0;
 
-    // Expense categories (9 to 34)
-    // 1. Primary check: match against textNorm (the core item being purchased)
-    // Food & Drink and Transport get evaluated on textNorm first
-    for (final entry in _expenseGeneralCategoryAliases.entries) {
-      final catId = entry.key;
-      for (final kw in entry.value) {
-        if (_hasWordOrPhrase(textNorm, kw)) {
-          return catId;
-        }
-      }
-    }
+    for (final category in categories) {
+      final candidates = <String>{
+        category.name,
+        ...category.keywords,
+      };
 
-    for (final entry in _expenseSpecificCategoryAliases.entries) {
-      final catId = entry.key;
-      for (final kw in entry.value) {
-        if (_hasWordOrPhrase(textNorm, kw)) {
-          return catId;
-        }
-      }
-    }
+      for (final candidate in candidates) {
+        final keyword = _removeDiacritics(candidate.toLowerCase().trim());
+        if (keyword.isEmpty) continue;
 
-    // 2. Secondary check: match against full sentence if textNorm didn't resolve
-    for (final entry in _expenseGeneralCategoryAliases.entries) {
-      final catId = entry.key;
-      for (final kw in entry.value) {
-        if (_hasWordOrPhrase(fullNorm, kw)) {
-          return catId;
+        final textScore = _keywordScore(textNorm, keyword, sourceWeight: 100);
+        final fullScore = _keywordScore(fullNorm, keyword, sourceWeight: 10);
+        final score = textScore > fullScore ? textScore : fullScore;
+
+        if (score > bestScore ||
+            (score == bestScore &&
+                score > 0 &&
+                category.sortOrder <
+                    (categories
+                            .where((c) => c.id == bestCategoryId)
+                            .firstOrNull
+                            ?.sortOrder ??
+                        9999))) {
+          bestScore = score;
+          bestCategoryId = category.id;
         }
       }
     }
 
-    for (final entry in _expenseSpecificCategoryAliases.entries) {
-      final catId = entry.key;
-      for (final kw in entry.value) {
-        if (_hasWordOrPhrase(fullNorm, kw)) {
-          return catId;
-        }
-      }
-    }
+    return bestCategoryId;
+  }
 
-    return 34; // Default Other Expense
+  static int _keywordScore(
+    String text,
+    String keyword, {
+    required int sourceWeight,
+  }) {
+    if (!_hasWordOrPhrase(text, keyword)) return 0;
+    final phraseBonus = keyword.contains(' ') ? 50 : 0;
+    return sourceWeight + phraseBonus + keyword.length;
   }
 
   static bool _hasWordOrPhrase(String text, String keyword) {
     if (keyword.contains(' ')) {
       return text.contains(keyword);
     }
-    return RegExp(r'(?:^|\s+)' + RegExp.escape(keyword) + r'(?=$|\s+)').hasMatch(text);
+    return RegExp(r'(?:^|\s+)' + RegExp.escape(keyword) + r'(?=$|\s+)')
+        .hasMatch(text);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
   // HELPER UTILITIES
   // ─────────────────────────────────────────────────────────────────────────────
 
-  static String _clean(String input) => input.replaceAll(RegExp(r'\s+'), ' ').trim();
+  static String _clean(String input) =>
+      input.replaceAll(RegExp(r'\s+'), ' ').trim();
 
   static String? _joinNonEmpty(List<String?> parts) {
     final values = parts
@@ -767,74 +809,13 @@ class LocalTransactionParser {
     if (normalized.startsWith('en')) return 'en';
     return 'vi';
   }
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // CATEGORY DICTIONARIES
-  // ─────────────────────────────────────────────────────────────────────────────
-
-  //master_id: Master Income categories
-  static const Map<int, List<String>> _incomeCategoryAliases = {
-    1: ['luong', 'salary', 'paycheck', 'wage'], // Lương
-    2: ['thuong', 'bonus', 'reward'], // Thưởng
-    3: ['tro cap', 'phu cap', 'allowance', 'stipend'], // Phụ cấp
-    4: ['kinh doanh', 'ban hang', 'doanh thu', 'business', 'sales', 'revenue'], // Kinh doanh
-    5: ['dau tu', 'co tuc', 'chung khoan', 'crypto', 'investment', 'dividend', 'interest', 'stock'], // Đầu tư
-    6: ['thu nhap thu dong', 'cho thue', 'passive income', 'rental income', 'royalty'], // Thu nhập thụ động
-    7: ['qua tang', 'duoc tang', 'mung tuoi', 'li xi', 'gift', 'present', 'gift money'], // Quà tặng
-    8: ['thu khac', 'cashback', 'hoan tien', 'other income'], // Thu khác
-  };
-
-  //master_id: Master Expense categories
-  static const Map<int, List<String>> _expenseSpecificCategoryAliases = {
-    28: ['tien nha', 'tien phong', 'thue nha', 'thue tro', 'chung cu', 'rent', 'house rent', 'apartment'], // Tiền nhà
-    29: ['tien dien', 'dien luc', 'evn', 'electricity', 'electric bill', 'power bill'], // Tiền điện
-    30: ['tien nuoc', 'nuoc sinh hoat', 'water bill'], // Tiền nước
-    11: ['nap dien thoai', 'tien dien thoai', 'cuoc dien thoai', 'viettel', 'vinaphone', 'mobifone', 'sim', '4g', '5g', 'phone bill', 'top up', 'topup', 'mobile bill'], // Điện thoại
-    12: ['tien mang', 'internet', 'wifi', 'fpt', 'vnpt', 'cap quang', 'broadband'], // Internet
-    13: ['do xang', 'xang dau', 'xang', 'gasoline', 'petrol', 'fuel', 'gas station'], // Xăng dầu
-    31: ['hoc phi', 'tien hoc', 'khoa hoc', 'sach vo', 'gia su', 'tuition', 'school fee', 'course', 'textbook'], // Học phí
-    32: ['bao hiem', 'bhyt', 'bhxh', 'insurance', 'life insurance'], // Bảo hiểm
-    33: ['tra gop', 'lai suat', 'vay', 'installment', 'credit loan'], // Trả góp
-    27: ['phi phat', 'phat nguoi', 'giao thong phat', 'penalty', 'fine', 'traffic ticket'], // Phí phạt
-    20: ['dam cuoi', 'mung cuoi', 'sinh nhat', 'thoi noi', 'hieu hi', 'wedding', 'birthday party', 'anniversary'], // Hiếu hỉ
-    19: ['chu cap', 'gui tien bo me', 'cho con', 'family support', 'child support'], // Chu cấp
-    18: ['du lich', 've may bay', 'khach san', 'resort', 'homestay', 'tour', 'flight ticket', 'hotel', 'travel', 'vacation', 'airbnb'], // Du lịch
-    17: ['xem phim', 'rap chieu phim', 'cgv', 'lotte cinema', 've phim', 'netflix', 'spotify', 'youtube premium', 'game', 'nap game', 'steam', 'cinema', 'movie', 'gaming'], // Giải trí
-    16: ['my pham', 'lam dep', 'cat toc', 'lam toc', 'barber', 'salon', 'spa', 'nail', 'skincare', 'haircut', 'cosmetic', 'beauty'], // Làm đẹp
-    15: ['quan ao', 'trang phuc', 'giay dep', 'ao', 'quan jean', 'quan tay', 'ao so mi', 'ao thun', 'ao khoac', 'vay', 'dam', 'uniqlo', 'zara', 'h&m', 'clothes', 'clothing', 'shoes', 'sneakers', 'shirt', 't-shirt', 'dress', 'jacket'], // Trang phục
-    14: ['sieu thi', 'tap hoa', 'nhu yeu pham', 'vinmart', 'winmart', 'bach hoa xanh', 'coopmart', 'big c', 'go!', 'cho', 'rau', 'thit', 'supermarket', 'grocery', 'groceries', 'market'], // Nhu yếu phẩm
-    21: ['kham benh', 'benh vien', 'bac si', 'xet nghiem', 'nha khoa', 'rang', 'hospital', 'clinic', 'doctor', 'dental', 'medical', 'checkup'], // Khám bệnh
-    22: ['thuoc men', 'thuoc', 'nha thuoc', 'pharmacity', 'long chau', 'pharmacy', 'medicine', 'drugstore'], // Thuốc men
-    23: ['tap luyen', 'gym', 'fitness', 'yoga', 'boi', 'cau long', 'da bong', 'tennis', 'the thao', 'workout', 'pilates', 'sport'], // Tập luyện
-    25: ['sua chua', 'sua xe', 'bao duong', 'thay nhot', 'rua xe', 'repair', 'maintenance', 'car wash', 'fix'], // Sửa chữa
-    26: ['tai nan', 'va cham', 'den bu', 'accident', 'collision'], // Tai nạn
-    24: ['quy lop', 'dong quy', 'tu thien', 'fund', 'charity', 'donation'], // Quỹ
-  };
-
-  static const Map<int, List<String>> _expenseGeneralCategoryAliases = {
-    // 9: Food & Drink
-    9: [
-      'cafe', 'ca phe', 'coffee', 'kopi', 'tra sua', 'milk tea', 'tra', 'tea',
-      'pho', 'bun', 'com', 'banh mi', 'an trua', 'an toi', 'an sang', 'an',
-      'uong', 'lunch', 'dinner', 'breakfast', 'meal', 'food', 'drink',
-      'highlands', 'starbucks', 'phuc long', 'haidilao', 'pizza', 'burger',
-      'kfc', 'lotteria', 'jollibee', 'mcdonald', 'restaurant', 'nha hang',
-      'quan an', 'lau', 'nuong', 'bbq', 'sushi', 'sashimi', 'ramen', 'snack',
-      'hawker', 'food court'
-    ],
-    // 10: Transport
-    10: [
-      'grab', 'be', 'gojek', 'taxi', 'xe bus', 'bus', 've xe', 'gui xe',
-      'bai xe', 'metro', 'tau hoa', 'tau', 'uber', 'parking', 'transport',
-      'ride', 'fare'
-    ],
-  };
 }
 
 class _DateExtractionResult {
   final DateTime dateTime;
   final String remainingText;
-  const _DateExtractionResult({required this.dateTime, required this.remainingText});
+  const _DateExtractionResult(
+      {required this.dateTime, required this.remainingText});
 }
 
 class _AmountExtractionResult {
@@ -851,11 +832,13 @@ class _AmountExtractionResult {
 class _WalletExtractionResult {
   final WalletModel? wallet;
   final String remainingText;
-  const _WalletExtractionResult({required this.wallet, required this.remainingText});
+  const _WalletExtractionResult(
+      {required this.wallet, required this.remainingText});
 }
 
 class _LocationExtractionResult {
   final String? location;
   final String remainingText;
-  const _LocationExtractionResult({required this.location, required this.remainingText});
+  const _LocationExtractionResult(
+      {required this.location, required this.remainingText});
 }
