@@ -4,13 +4,9 @@
 
 FinA is a Flutter personal-finance application focused on low-friction transaction
 entry. Users can create transactions manually or describe them in a chat
-interface. The chat flow converts speech to text on the device, sends the text to
-the backend AI parser, receives structured JSON, and opens the standard
-transaction form for user review before saving.
+interface. The chat flow can convert speech to text on the device and parse transactions either via an online backend AI parser or instantly offline using a robust client-side **Local Transaction Parser**.
 
-This document describes the current implementation on the `main` branch. A
-rule-based local parser exists only on the experimental branch
-`local-parser-experiment` and is not part of the production flow.
+This document describes the architecture, mobile application structure, backend REST API, database schema, local caching, and a detailed technical breakdown of the Local Parser along with a guide on adding support for new languages (such as Chinese).
 
 ## 2. System Architecture
 
@@ -19,6 +15,7 @@ flowchart LR
     User["User"]
     App["Flutter mobile app"]
     STT["speech_to_text"]
+    LocalParser["Local Transaction Parser (Offline)"]
     API["FastAPI REST backend"]
     AI["OpenAI-compatible AI provider"]
     DB["MySQL database"]
@@ -28,6 +25,8 @@ flowchart LR
     User --> App
     App --> STT
     STT --> App
+    App --> LocalParser
+    LocalParser --> App
     App --> API
     API --> AI
     API --> DB
@@ -35,10 +34,7 @@ flowchart LR
     App --> FCM
 ```
 
-The mobile application is a REST client. The FastAPI backend owns MySQL
-persistence, authentication, master-data serialization, wallet balance
-recalculation, and AI parsing. The app caches session data, settings, and synced
-master data locally with `SharedPreferences`.
+The mobile application is a REST client with integrated local intelligence. The FastAPI backend owns MySQL persistence, authentication, master-data serialization, wallet balance recalculation, and AI parsing. The app caches session data, settings, and synced master data locally with `SharedPreferences`.
 
 ## 3. Mobile Application
 
@@ -61,15 +57,18 @@ master data locally with `SharedPreferences`.
 
 | Path | Responsibility |
 | --- | --- |
-| `lib/main.dart` | App bootstrap, theme, localization delegates, routes |
+| `lib/main.dart` | App bootstrap, theme, localization delegates, routes, ParserRulesManager init |
 | `lib/session.dart` | In-memory authenticated session |
-| `lib/screens/chat_screen.dart` | Conversational entry, speech-to-text, AI result confirmation |
-| `lib/screens/create_transaction_screen.dart` | Manual entry and AI-prefilled transaction form |
+| `lib/screens/chat_screen.dart` | Conversational entry, speech-to-text, local/AI result confirmation |
+| `lib/screens/create_transaction_screen.dart` | Manual entry and prefilled transaction form |
 | `lib/screens/edit_transaction_screen.dart` | Transaction update and delete flow |
 | `lib/screens/home_screen.dart` | Dashboard, balances, recent transactions, quick actions |
 | `lib/screens/history_screen.dart` | Filtered transaction history |
 | `lib/screens/wallet_list_screen.dart` | Wallet management |
-| `lib/services/prompt_service.dart` | Production AI parser API call |
+| `lib/services/prompt_service.dart` | Production AI parser API call & local fallback integration |
+| `lib/services/local_transaction_parser.dart` | Offline rule-based natural language transaction parser |
+| `lib/services/parser_rules.dart` | Parser rule pack schema, models, regex builder, and self-tests |
+| `lib/services/parser_rules_manager.dart` | Bundled vs cached rule management and server sync with SHA-256 validation |
 | `lib/services/transaction_service.dart` | Transaction CRUD REST client |
 | `lib/services/master_data_service.dart` | User initialization and master-data sync |
 | `lib/services/master_data_store.dart` | In-memory master-data store and local cache |
@@ -83,109 +82,267 @@ sequenceDiagram
     participant App
     participant Splash
     participant AuthStorage
-    participant API
     participant MasterDataStore
+    participant ParserManager
+    participant API
     participant Home
 
     App->>Splash: Start application
     Splash->>AuthStorage: Read cached JWT
+    Splash->>MasterDataStore: Load cached wallets and categories
+    Splash->>ParserManager: Init bundled & cached parser rules (assets/parser_rules.json)
     Splash->>API: POST /auth/login/token
     API-->>Splash: Validated user session
-    Splash->>MasterDataStore: Load cached wallets and categories
     Splash->>MasterDataStore: Sync latest master data in background
+    Splash->>ParserManager: Check for remote rule updates in background
     Splash->>Home: Navigate to dashboard
 ```
 
 If the user has not completed onboarding, the splash screen routes to the
 onboarding flow before opening the dashboard.
 
-## 4. Conversational Transaction Flow
+## 4. Conversational Transaction Flow & Local Parser
 
-The production flow uses the backend AI parser.
+FinA supports both offline local parsing and online backend AI parsing for chat requests.
 
 ```mermaid
 sequenceDiagram
     participant User
     participant Chat as ChatScreen
     participant STT as speech_to_text
+    participant LocalParser as LocalTransactionParser
     participant Prompt as PromptService
     participant API as Backend AI endpoint
     participant Form as CreateTransactionScreen
-    participant Tx as TransactionService
 
     User->>Chat: Speak or type transaction request
     Chat->>STT: Start listening when robot button is tapped
     STT-->>Chat: Recognized text
-    Chat->>Prompt: sendPrompt(text, userId, token)
-    Prompt->>API: POST /transactions/prompt
-    API-->>Prompt: PromptResult JSON
-    Prompt-->>Chat: Structured TransactionData
+    Chat->>LocalParser: parse(text, defaultCurrency, locale)
+    alt Local parse successful
+        LocalParser-->>Chat: Structured PromptResult (offline)
+    else Local parse fails
+        Chat->>Prompt: sendPrompt(text, userId, token)
+        Prompt->>API: POST /transactions/prompt
+        API-->>Prompt: PromptResult JSON
+        Prompt-->>Chat: Structured TransactionData
+    end
     Chat-->>User: Show parsed transaction summary
     User->>Chat: Confirm
     Chat->>Form: Open prefilled transaction form
-    User->>Form: Review and save
-    Form->>Tx: POST /transactions
 ```
 
-The backend implementation lives in `finaserver/app/ai_service.py`. It sends a
-system prompt and user context to an OpenAI-compatible `/chat/completions`
-endpoint using `httpx`. Provider URL, API key, model, and timeout come from
-environment variables:
+## 5. Detailed Technical Breakdown: Local Transaction Parser
 
-| Variable | Purpose |
-| --- | --- |
-| `AI_API_KEY` | Provider credential |
-| `AI_BASE_URL` | OpenAI-compatible provider base URL |
-| `AI_MODEL` | Provider model identifier |
-| `AI_TIMEOUT_SECONDS` | Request timeout, default `25` seconds |
+The **Local Transaction Parser** (`lib/services/local_transaction_parser.dart`) provides instant offline natural language transaction recognition. It operates without network latency, making it ideal for voice input in chat.
 
-If `AI_API_KEY` is absent, the backend currently falls back to a deterministic
-heuristic mock parser for development.
+### 5.1 Architecture & Rule Packs (`parser_rules.json`)
+- **Separation of Logic and Data**: The parsing engine code (`LocalTransactionParser`) is fixed, while all linguistic data (keywords, currency symbols, unit multipliers, intent phrases, category aliases) resides in an external JSON rule pack (`assets/parser_rules.json`).
+- **Dynamic Server Updates (`ParserRulesManager`)**:
+  - The app bundles a default rule pack (`assets/parser_rules.json`).
+  - At startup (`main.dart`), `ParserRulesManager` initializes the bundled rules and checks local storage for a newer cached version.
+  - It fetches a remote `manifest.json` from the server containing `version`, `url`, `sha256`, and `minEngine`.
+  - Security and Compatibility Checks before applying updates:
+    1. **Version check**: New version must be strictly greater than current.
+    2. **Engine compatibility**: `minEngine` must be `<= kParserEngineVersion`.
+    3. **Checksum verification**: SHA-256 hash of downloaded JSON must match `sha256` in the manifest.
+    4. **Self-test validation**: Runs built-in test cases (`LocalTransactionParser.runSelfTests(pack)`) against the candidate rule pack. If any test case fails, the update is rejected.
 
-### Prompt request
+### 5.2 The 8-Step Parsing Pipeline
 
-`POST /transactions/prompt`
+When `LocalTransactionParser.parse(input)` is invoked, it executes an 8-step deterministic pipeline:
 
-```json
-{
-  "text": "Mua cafe 35k tại T1",
-  "user_id": 123,
-  "currency": "VND",
-  "language_code": "vi"
-}
+```mermaid
+flowchart TD
+    Start["Raw Input Text"] --> Step1["1. Date & Time Extraction"]
+    Step1 --> Step2["2. Amount & Currency Extraction"]
+    Step2 --> Step3["3. Intent Detection (Transfer / Income / Expense)"]
+    Step3 --> Step4{"Is Transfer?"}
+    Step4 -- Yes --> TransferFlow["4. Parse Transfer (Source & Dest Wallets)"]
+    Step4 -- No --> Step5["5. Wallet Resolution"]
+    TransferFlow --> End["Return PromptResult"]
+    Step5 --> Step6["6. Location & Note Extraction"]
+    Step6 --> Step7["7. Content Cleaning & Normalization"]
+    Step7 --> Step8["8. Category Classification"]
+    Step8 --> End
 ```
 
-### Prompt response model
+1. **Date & Time Extraction (`_extractDateTime`)**:
+   - Parses explicit dates (e.g., `ngày 15/05`, `15/5/2026`).
+   - Parses relative day expressions (e.g., `hôm qua`, `hôm nay`, `hôm kia`, `yesterday`, `today`) mapped via `relativeDays` to day offsets.
+   - Parses N days ago expressions (e.g., `2 ngày trước`, `3 days ago`) using `nDaysAgoRegex`.
+   - Defaults to `DateTime.now()` if no date is mentioned.
 
-The Flutter client expects a response compatible with:
+2. **Amount & Currency Extraction (`_extractAmount`)**:
+   - **Pattern 1 (Prefix)**: Matches currency symbols followed by numbers (e.g., `$15`, `₫50,000`, `€25`, `S$ 8.50`).
+   - **Pattern 2 (Suffix)**: Matches numbers followed by unit multipliers or currency codes (e.g., `35k`, `50 nghìn`, `1.5tr`, `2 triệu`, `2 củ`, `3 lít`, `12 SGD`).
+   - **Pattern 3 (Standalone)**: Matches numbers without units (e.g., `Kopi 1.80`, `35000`), defaulting to `defaultCurrency`.
 
-```json
-{
-  "request_id": "request-id",
-  "user_prompt": "Mua cafe 35k tại T1",
-  "data": {
-    "type": "expense",
-    "amount": 35000,
-    "currency": "VND",
-    "content": "Cafe tại T1",
-    "date_time": "2026-05-30T10:00:00Z",
-    "master_category_id": 9,
-    "wallet": null,
-    "notes": "T1"
+3. **Intent Detection (`_isTransferIntent`, `_isIncomeIntent`)**:
+   - Normalizes text (removes diacritics and converts to lowercase).
+   - Checks against `transferIntentKeywords` and `incomeIntentKeywords` to determine transaction type (`AppConstants.TRANSFER`, `AppConstants.INCOME`, or `AppConstants.EXPENSE`).
+
+4. **Transfer Flow Processing (`_parseTransfer`)**:
+   - Strips transfer verbs (`chuyển khoản`, `rút tiền`, `transfer`).
+   - Parses source and destination using `fromToPattern` (e.g., `từ VCB sang MoMo`, `from bank to cash`) or withdrawal hints (`rút từ thẻ tín dụng`).
+
+5. **Wallet Resolution (`_extractWallet`)**:
+   - Detects explicit wallet prepositions (`bằng ví VCB`, `qua momo`, `using cash`, `via bank`).
+   - Performs direct wallet name lookup against user wallets in `MasterDataStore().wallets` or aliases (`cashTerms`, `bankHintTerms`).
+
+6. **Location / Note Extraction (`_extractLocation`)**:
+   - Matches location prepositions (`ở Highlands`, `tại Circle K`, `at Starbucks`).
+   - Guards against category false positives (e.g., in `"quán cafe 35k"`, `"cafe"` is recognized as a category rather than a location).
+
+7. **Content Cleaning (`_cleanContent`)**:
+   - Strips leading action verbs (`mua`, `ăn`, `paid`, `bought`, etc.) and filler words (`tiền`, `cho mình`, `hết`).
+   - Protects critical compound nouns from being stripped (e.g., `tiền nhà`, `tiền điện`, `tiền nước`, `tiền mạng` via `keepTienPhrases`).
+   - Capitalizes the final transaction content string.
+
+8. **Category Classification (`_resolveMasterCategoryId`)**:
+   - For **Income**: Matches normalized content and full sentence against `incomeCategories` keywords.
+   - For **Expense**: Matches against `expenseGeneralCategories` (e.g., Food & Drink, Transport) first, then `expenseSpecificCategories` (e.g., Rent, Electricity, Internet, Fuel).
+   - Falls back to default category IDs (`defaultIncomeCategory` = 35, `defaultExpenseCategory` = 34).
+
+---
+
+## 6. Guide: Adding Support for a New Language (e.g., Chinese / Tiếng Trung - `zh`)
+
+To extend the Local Transaction Parser to support Chinese language inputs (e.g., `"吃面 35元"`, `"发工资 5000元"`, `"昨天 支付宝转账 200元"`), follow these 4 steps:
+
+### Step 1: Update `assets/parser_rules.json` with Chinese Linguistic Rules
+Open `assets/parser_rules.json` and add Chinese entries across the rule sections:
+
+1. **`relativeDays`**: Add relative time expressions and their day offsets.
+   ```json
+   "昨天": -1,
+   "昨天晚上": -1,
+   "今天": 0,
+   "今天早上": 0,
+   "今天下午": 0,
+   "前天": -2,
+   "yesterday": -1,
+   "today": 0
+   ```
+2. **`nDaysAgoUnits`**: Add Chinese suffixes for "days ago".
+   ```json
+   "天前",
+   "days ago"
+   ```
+3. **`currencySymbols`**: Add Chinese currency symbols.
+   ```json
+   "¥": "CNY",
+   "元": "CNY",
+   "块": "CNY"
+   ```
+4. **`amountUnits`**: Add Chinese numeric multipliers and currency units.
+   ```json
+   { "u": "元", "currency": "CNY" },
+   { "u": "块", "currency": "CNY" },
+   { "u": "千", "mult": 1000 },
+   { "u": "万", "mult": 10000 }
+   ```
+5. **`transferIntentKeywords` & `incomeIntentKeywords`**: Add Chinese intent keywords.
+   - `transferIntentKeywords`: `["转账", "汇款", "取现", "转", "transfer"]`
+   - `incomeIntentKeywords`: `["工资", "收到", "奖金", "收入", "兼职", "salary", "bonus"]`
+6. **`transferVerbs`, `transferFromWords`, `transferToWords`, `withdrawHints`**:
+   - `transferVerbs`: `["转账", "汇款", "取现", "transfer"]`
+   - `transferFromWords`: `["从", "自", "from"]`
+   - `transferToWords`: `["到", "至", "给", "to"]`
+   - `withdrawHints`: `["取现", "withdraw"]`
+7. **`walletAliases`**:
+   - `cash`: `["现金", "cash"]`
+   - `bankHint`: `["银行卡", "网银", "bank"]`
+   - `bankWallet`: `["银行", "bank"]`
+8. **`locationPrepositions`**:
+   ```json
+   "在", "于", "at", "in"
+   ```
+9. **`leadingVerbs`**: Add Chinese action verbs.
+   ```json
+   "买", "吃", "喝", "付", "花", "买单", "收到", "赚", "bought", "pay"
+   ```
+10. **`fillerWords`**: Add Chinese filler words.
+    ```json
+    "钱", "的", "了", "给", "for"
+    ```
+11. **`incomeCategories` & `expenseGeneralCategories` / `expenseSpecificCategories`**: Add Chinese keywords to existing master categories.
+    - Category `1` (Salary): Add `"工资"`, `"薪水"`
+    - Category `2` (Bonus): Add `"奖金"`, `"年终奖"`
+    - Category `9` (Food & Drink): Add `"饭"`, `"面"`, `"咖啡"`, `"奶茶"`, `"餐厅"`, `"吃饭"`
+    - Category `10` (Transport): Add `"出租车"`, `"地铁"`, `"公交车"`, `"滴滴"`
+    - Category `28` (Rent): Add `"房租"`
+    - Category `29` (Electricity): Add `"电费"`
+    - Category `30` (Water): Add `"水费"`
+
+### Step 2: Handle Chinese Tokenization & Substring Matching
+Unlike English or Vietnamese which use space delimiters (`\b` word boundaries), Chinese sentences do not contain spaces between characters (e.g., `"吃面35元"` or `"吃面 35元"`).
+
+1. **Update `_hasWordOrPhrase` in `lib/services/local_transaction_parser.dart`**:
+   - For non-space languages or Chinese keywords without spaces, `\b` regex word boundaries fail because Chinese characters do not have whitespace boundaries.
+   - Adjust `_hasWordOrPhrase` to check substring containment (`text.contains(keyword)`) for Chinese/non-space character keywords, or ensure character-level matching:
+   ```dart
+   static bool _hasWordOrPhrase(String text, String keyword) {
+     if (keyword.contains(' ') || _isChinese(keyword)) {
+       return text.contains(keyword);
+     }
+     return RegExp(r'(?:^|\s+)' + RegExp.escape(keyword) + r'(?=$|\s+)')
+         .hasMatch(text);
+   }
+
+   static bool _isChinese(String text) {
+     return RegExp(r'[\u4e00-\u9fa5]').hasMatch(text);
+   }
+   ```
+
+### Step 3: Localization Support (`_categoryLocale`)
+Ensure `_categoryLocale(locale)` in `LocalTransactionParser` handles Chinese locales (`zh`, `zh_CN`, `zh_TW`):
+```dart
+  static String _categoryLocale(String locale) {
+    final normalized = locale.toLowerCase();
+    if (normalized.startsWith('en')) return 'en';
+    if (normalized.startsWith('zh')) return 'zh';
+    return 'vi';
   }
-}
+```
+And provide fallback default contents in `_getDefaultContent`:
+```dart
+  static String _getDefaultContent(int type, int categoryId, String locale) {
+    if (locale == 'zh') {
+      if (type == AppConstants.INCOME) return '收入';
+      if (type == AppConstants.TRANSFER) return '转账';
+      return '支出';
+    }
+    if (type == AppConstants.INCOME) {
+      return locale == 'vi' ? 'Thu nhập' : 'Income';
+    }
+    return locale == 'vi' ? 'Chi tiêu' : 'Expense';
+  }
 ```
 
-`TransactionData.fromJson()` converts `type` to an integer:
+### Step 4: Add Test Cases in `parser_rules.json` and Test Suite
+Add Chinese test cases in the `tests` section of `assets/parser_rules.json`:
+```json
+{
+  "input": "吃面 35元",
+  "type": "expense",
+  "amount": 35,
+  "currency": "CNY",
+  "category": 9
+},
+{
+  "input": "收到工资 8000元",
+  "type": "income",
+  "amount": 8000,
+  "currency": "CNY",
+  "category": 1
+}
+```
+Run `flutter test` to verify that all Chinese test cases pass successfully.
 
-| JSON value | App value | Meaning |
-| --- | --- | --- |
-| `expense` | `0` | Expense |
-| `income` | `1` | Income |
+---
 
-The database additionally supports transfer transactions with `type = 2`.
-
-## 5. Localization and Master Categories
+## 7. Localization and Master Categories
 
 FinA supports Vietnamese (`vi`) and English (`en`) in the current ARB resources.
 The selected locale is stored locally and sent to the backend during master-data
@@ -228,7 +385,7 @@ Examples:
 | `34` | Expense | Khác | Other |
 | `35` | Income | Khác | Other |
 
-## 6. REST API Used by the Mobile App
+## 8. REST API Used by the Mobile App
 
 The backend base URL is configured in `lib/app_constants.dart`.
 
@@ -268,7 +425,7 @@ The backend is a FastAPI application under `finaserver/`.
 | `app/routers/dashboard.py` | Dashboard summary and recent transactions |
 | `app/services/common_service.py` | Stored-procedure wallet balance recalculation |
 
-## 7. Database Overview
+## 9. Database Overview
 
 The provided `fina_db.sql` describes a MySQL schema.
 
@@ -331,7 +488,7 @@ The `transactions` table is the center of the financial model.
 | `users` | Unique `email` |
 | `master_category_translations` | Unique `(category_id, locale)` |
 
-## 8. Local Cache and Sync
+## 10. Local Cache and Sync
 
 The app uses `SharedPreferences` for:
 
@@ -358,17 +515,7 @@ background refresh completes.
 the user status to `9`. It no longer copies master categories into per-user
 category rows.
 
-## 9. Experimental Local Parser
-
-The branch `local-parser-experiment` contains a rule-based parser prototype.
-It parses constrained sentence patterns locally and attempts category
-classification without calling the AI endpoint.
-
-It is intentionally excluded from `main` because natural-language financial
-inputs contain ambiguous merchant names, categories, currencies, and account
-references. The production branch continues to call `/transactions/prompt`.
-
-## 10. Known Gaps and Follow-Up Work
+## 11. Known Gaps and Follow-Up Work
 
 - `BillUploadService` still uses the placeholder base URL
   `https://your-api.com`; the FastAPI backend does not currently expose
