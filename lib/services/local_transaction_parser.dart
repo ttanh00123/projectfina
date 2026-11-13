@@ -1,19 +1,84 @@
 // lib/services/local_transaction_parser.dart
+//
+// Logic parser giữ nguyên; toàn bộ dữ liệu (từ khoá, đơn vị, giới từ, category...) đọc từ
+// ParserRules (assets/parser_rules.json hoặc bản đã tải về), xem parser_rules.dart.
 
 import 'package:taexpense/app_constants.dart';
 import 'package:taexpense/models/prompt_result.dart';
 import 'package:taexpense/models/transaction_data.dart';
 import 'package:taexpense/models/wallet_model.dart';
 import 'package:taexpense/services/master_data_store.dart';
+import 'package:taexpense/services/parser_rules.dart';
 
 class LocalTransactionParser {
+  static ParserRules? _override;
+
+  /// Rule đang dùng: [_override] (khi self-test một pack ứng viên) hoặc rule hiện hành của app.
+  static ParserRules get _r => _override ?? ParserRulesStore.current;
+
   /// Entry point to parse natural language transaction offline.
   /// Returns a [PromptResult] if parsed successfully, or null if cannot parse.
+  ///
+  /// [rules]: chỉ dùng để thử một bộ rule khác (self-test trước khi áp dụng bản cập nhật).
   static PromptResult? parse(
     String input, {
     String defaultCurrency = 'VND',
     String locale = 'vi',
+    ParserRules? rules,
   }) {
+    if (rules == null) return _parseImpl(input, defaultCurrency, locale);
+    final prev = _override;
+    _override = rules;
+    try {
+      return _parseImpl(input, defaultCurrency, locale);
+    } finally {
+      _override = prev; // parse là đồng bộ nên không bị chen ngang
+    }
+  }
+
+  /// Chạy các test case đi kèm [rules]. Trả về danh sách lỗi (rỗng = đạt).
+  static List<String> runSelfTests(ParserRules rules) {
+    final failures = <String>[];
+    for (final t in rules.tests) {
+      PromptResult? res;
+      try {
+        res = parse(t.input, rules: rules);
+      } catch (e) {
+        failures.add('"${t.input}": lỗi khi parse ($e)');
+        continue;
+      }
+      final TransactionData? d = res?.data;
+      if (d == null) {
+        failures.add('"${t.input}": không parse được');
+        continue;
+      }
+      void check(String field, Object? expected, Object? actual) {
+        if (expected != null && expected != actual) {
+          failures.add('"${t.input}": $field mong đợi $expected, nhận $actual');
+        }
+      }
+
+      if (t.type != null) {
+        final int? want = t.type == 'transfer'
+            ? AppConstants.TRANSFER
+            : (t.type == 'income'
+                ? AppConstants.INCOME
+                : (t.type == 'expense' ? AppConstants.EXPENSE : null));
+        check('type', want, d.type);
+      }
+      if (t.amount != null && (d.amount - t.amount!).abs() > 0.005) {
+        failures
+            .add('"${t.input}": amount mong đợi ${t.amount}, nhận ${d.amount}');
+      }
+      check('currency', t.currency, d.currency);
+      check('category', t.category, d.category);
+      check('location', t.location, d.note);
+    }
+    return failures;
+  }
+
+  static PromptResult? _parseImpl(
+      String input, String defaultCurrency, String locale) {
     final rawText = _clean(input);
     if (rawText.isEmpty) return null;
 
@@ -102,6 +167,7 @@ class LocalTransactionParser {
   // ─────────────────────────────────────────────────────────────────────────────
 
   static _DateExtractionResult _extractDateTime(String text) {
+    final r = _r;
     final now = DateTime.now();
     var working = text;
     DateTime? detectedDate;
@@ -134,59 +200,23 @@ class LocalTransactionParser {
       final normalized = _removeDiacritics(working.toLowerCase());
 
       // B. N days ago: 2 ngày trước, 3 ngay truoc, 2 days ago
-      final nDaysAgoRegex =
-          RegExp(r'\b(\d+)\s*(?:ngày trước|ngay truoc|days ago)\b');
-      final nDaysMatch = nDaysAgoRegex.firstMatch(normalized);
+      final nDaysMatch = r.nDaysAgoRegex.firstMatch(normalized);
       if (nDaysMatch != null) {
         final days = int.tryParse(nDaysMatch.group(1) ?? '') ?? 0;
         detectedDate = now.subtract(Duration(days: days));
-        working = working.replaceFirst(
-            RegExp(r'\b' + RegExp.escape(nDaysMatch.group(0)!) + r'\b',
-                caseSensitive: false),
-            ' ');
+        // _removeDiacritics giữ nguyên độ dài nên dùng được vị trí match trên text gốc
+        if (normalized.length == working.length) {
+          working = working.replaceRange(nDaysMatch.start, nDaysMatch.end, ' ');
+        }
       }
     }
 
     if (detectedDate == null) {
-      // C. Relative keywords
-      final relativeMap = <String, int>{
-        // -2 days
-        'hôm kia': -2,
-        'hom kia': -2,
-        'the day before yesterday': -2,
-        // -1 day
-        'hôm qua': -1,
-        'hom qua': -1,
-        'tối qua': -1,
-        'toi qua': -1,
-        'sáng qua': -1,
-        'sang qua': -1,
-        'chiều qua': -1,
-        'chieu qua': -1,
-        'yesterday': -1,
-        'last night': -1,
-        // today (0)
-        'hôm nay': 0,
-        'hom nay': 0,
-        'sáng nay': 0,
-        'sang nay': 0,
-        'trưa nay': 0,
-        'trua nay': 0,
-        'chiều nay': 0,
-        'chieu nay': 0,
-        'tối nay': 0,
-        'toi nay': 0,
-        'today': 0,
-        'this morning': 0,
-        'this afternoon': 0,
-        'tonight': 0,
-      };
-
-      for (final entry in relativeMap.entries) {
-        final pattern = RegExp(r'\b' + entry.key + r'\b', caseSensitive: false);
-        if (pattern.hasMatch(working)) {
-          detectedDate = now.add(Duration(days: entry.value));
-          working = working.replaceFirst(pattern, ' ');
+      // C. Relative keywords (thứ tự trong pack = thứ tự ưu tiên)
+      for (final entry in r.relativeDays) {
+        if (entry.pattern.hasMatch(working)) {
+          detectedDate = now.add(Duration(days: entry.offsetDays));
+          working = working.replaceFirst(entry.pattern, ' ');
           break;
         }
       }
@@ -204,13 +234,10 @@ class LocalTransactionParser {
 
   static _AmountExtractionResult? _extractAmount(
       String text, String defaultCurrency) {
-    // Pattern 1: Currency prefix: $15, S$ 8.50, ₫50,000, €25, £10
-    final prefixPattern = RegExp(
-      r'(?:^|\s+)(\$|s\$|us\$|a\$|₫|đ|€|£|¥)\s*(\d{1,3}(?:[.,]\d{3})*|\d+)(?:[.,](\d{1,2}))?(?=$|\s|[.,;!?])',
-      caseSensitive: false,
-    );
+    final r = _r;
 
-    final prefixMatch = prefixPattern.firstMatch(text);
+    // Pattern 1: Currency prefix: $15, S$ 8.50, ₫50,000, €25, £10
+    final prefixMatch = r.prefixPattern.firstMatch(text);
     if (prefixMatch != null) {
       final symbol = prefixMatch.group(1)?.toLowerCase() ?? '';
       final intPart = prefixMatch.group(2) ?? '0';
@@ -218,7 +245,7 @@ class LocalTransactionParser {
 
       final amount = _parseFormattedNumber(intPart, decPart);
       if (amount > 0) {
-        final currency = _resolveCurrencyFromSymbol(symbol, defaultCurrency);
+        final currency = r.currencySymbols[symbol] ?? defaultCurrency;
         final remaining =
             text.replaceRange(prefixMatch.start, prefixMatch.end, ' ');
         return _AmountExtractionResult(
@@ -231,20 +258,15 @@ class LocalTransactionParser {
 
     // Pattern 2: Number with suffix multiplier / currency:
     // e.g. 35k, 50 nghìn, 1.5tr, 2 triệu, 2 củ, 1 lít, 3.50 dollars, 12 SGD, 50.000đ
-    // Use lookahead (?=$|\s|[.,;!?]) instead of \b to reliably match non-ASCII characters like 'củ', 'lít'
-    final suffixPattern = RegExp(
-      r'(?:^|\b)(\d+(?:[.,]\d+)?)\s*(k|nghìn|nghin|ngàn|ngan|tr|triệu|trieu|m|củ|cu|lít|lit|xị|xi|tỷ|ty|b|đ|₫|vnd|usd|sgd|eur|gbp|dollars?|bucks?)(?=$|\s|[.,;!?])',
-      caseSensitive: false,
-    );
-
-    final suffixMatch = suffixPattern.firstMatch(text);
+    final suffixMatch = r.suffixPattern.firstMatch(text);
     if (suffixMatch != null) {
       final numStr = suffixMatch.group(1)!;
       final unit = suffixMatch.group(2)!.toLowerCase();
 
       final parsedNum = _parseFlexibleNumber(numStr);
-      final multiplier = _getMultiplier(unit);
-      final currency = _resolveCurrencyFromUnit(unit, defaultCurrency);
+      final unitInfo = r.unitFor(unit);
+      final multiplier = unitInfo?.multiplier ?? 1.0;
+      final currency = unitInfo?.currency ?? defaultCurrency;
       final amount = parsedNum * multiplier;
 
       if (amount > 0) {
@@ -320,93 +342,15 @@ class LocalTransactionParser {
     return double.tryParse(val) ?? 0.0;
   }
 
-  static double _getMultiplier(String unit) {
-    switch (_removeDiacritics(unit)) {
-      case 'k':
-      case 'nghin':
-      case 'ngan':
-        return 1000.0;
-      case 'lit':
-      case 'xi':
-        return 100000.0;
-      case 'tr':
-      case 'trieu':
-      case 'm':
-      case 'cu':
-        return 1000000.0;
-      case 'ty':
-      case 'b':
-        return 1000000000.0;
-      default:
-        return 1.0;
-    }
-  }
-
-  static String _resolveCurrencyFromSymbol(String symbol, String fallback) {
-    switch (symbol) {
-      case r'$':
-      case 'us\$':
-        return 'USD';
-      case r's$':
-        return 'SGD';
-      case r'a$':
-        return 'AUD';
-      case '₫':
-      case 'đ':
-        return 'VND';
-      case '€':
-        return 'EUR';
-      case '£':
-        return 'GBP';
-      case '¥':
-        return 'JPY';
-      default:
-        return fallback;
-    }
-  }
-
-  static String _resolveCurrencyFromUnit(String unit, String fallback) {
-    final u = _removeDiacritics(unit.toLowerCase());
-    switch (u) {
-      case 'vnd':
-      case 'd':
-      case 'đ':
-      case 'dong':
-        return 'VND';
-      case 'usd':
-      case 'dollar':
-      case 'dollars':
-      case 'bucks':
-        return 'USD';
-      case 'sgd':
-      case 'sing':
-        return 'SGD';
-      case 'eur':
-      case 'euro':
-        return 'EUR';
-      case 'gbp':
-      case 'pound':
-        return 'GBP';
-      default:
-        return fallback;
-    }
-  }
-
   // ─────────────────────────────────────────────────────────────────────────────
   // 3. INTENT DETECTION (TRANSFER / INCOME / EXPENSE)
   // ─────────────────────────────────────────────────────────────────────────────
 
-  static bool _isTransferIntent(String normalized) {
-    return RegExp(
-      r'\b(chuyen khoan|chuyen tien|chuyen|rut tien|rut|ban tien|transfer|transferred|send money|sent money|withdraw|move money|moved money)\b',
-    ).hasMatch(normalized);
-  }
+  static bool _isTransferIntent(String normalized) =>
+      _r.transferIntentRegex.hasMatch(normalized);
 
-  static bool _isIncomeIntent(String normalized) {
-    return RegExp(
-      r'\b(nhan luong|luong|thuong|nhan tien|nhan|thu nhap|ban hang|co tuc|lai|duoc tang|duoc cho|salary|paycheck|bonus|income|received|cashback|dividend|sold|wage)\b',
-    ).hasMatch(normalized);
-  }
+  static bool _isIncomeIntent(String normalized) =>
+      _r.incomeIntentRegex.hasMatch(normalized);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 4. TRANSFER HANDLER
@@ -420,15 +364,10 @@ class LocalTransactionParser {
     required DateTime dateTime,
     required String locale,
   }) {
+    final r = _r;
     var working = rawText;
     // Remove transfer action verbs
-    working = working.replaceFirst(
-      RegExp(
-        r'\b(chuyển khoản|chuyen khoan|chuyển tiền|chuyen tien|chuyển|chuyen|rút tiền|rut tien|rút|rut|bắn tiền|transfer|transferred|send|withdraw|move)\b',
-        caseSensitive: false,
-      ),
-      ' ',
-    );
+    working = working.replaceFirst(r.transferVerbRegex, ' ');
     working = _clean(working);
 
     final normalized = _removeDiacritics(working.toLowerCase());
@@ -437,36 +376,21 @@ class LocalTransactionParser {
     String? toHint;
 
     // Pattern A: từ X sang/đến/qua/vào Y / from X to Y
-    final fromToPattern = RegExp(
-      r'(?:^|\s+)(?:từ|tu|from)\s+([a-zA-Z0-9\s]+?)\s+(?:sang|đến|den|tới|toi|qua|vào|vao|về|ve|to)\s+([a-zA-Z0-9\s]+)',
-      caseSensitive: false,
-    );
-    final fromToMatch = fromToPattern.firstMatch(working);
+    final fromToMatch = r.fromToPattern.firstMatch(working);
 
     if (fromToMatch != null) {
       fromHint = fromToMatch.group(1)?.trim();
       toHint = fromToMatch.group(2)?.trim();
     } else {
       // Pattern B: X sang/đến/qua Y
-      final separatorPattern = RegExp(
-        r'(?:^|\s+)(sang|đến|den|tới|toi|qua|vào|vao|về|ve|to)\s+([a-zA-Z0-9\s]+)',
-        caseSensitive: false,
-      );
-      final sepMatch = separatorPattern.firstMatch(working);
+      final sepMatch = r.separatorPattern.firstMatch(working);
       if (sepMatch != null) {
         fromHint = working.substring(0, sepMatch.start).trim();
         toHint = sepMatch.group(2)?.trim();
-        fromHint = fromHint
-            .replaceFirst(
-                RegExp(r'^(?:từ|tu|from)\s+', caseSensitive: false), '')
-            .trim();
-      } else if (normalized.contains('rut') ||
-          normalized.contains('withdraw')) {
+        fromHint = fromHint.replaceFirst(r.fromPrefixRegex, '').trim();
+      } else if (r.withdrawHints.any(normalized.contains)) {
         // Rút từ X về tiền mặt
-        fromHint = working
-            .replaceFirst(
-                RegExp(r'^(?:từ|tu|from)\s+', caseSensitive: false), '')
-            .trim();
+        fromHint = working.replaceFirst(r.fromPrefixRegex, '').trim();
         toHint = locale == 'en' ? 'cash' : 'tiền mặt';
       }
     }
@@ -542,12 +466,7 @@ class LocalTransactionParser {
     WalletModel? matchedWallet;
 
     // A. Explicit wallet prepositions: bằng ví VCB, qua momo, using cash, via bank
-    final prepPattern = RegExp(
-      r'(?:^|\s+)(bằng ví|bang vi|bằng|bang|qua|từ|tu|ví|vi|using|via|with|by|through)\s+([a-zA-Z0-9\s]+?)(?=$|\s|[.,;!?])',
-      caseSensitive: false,
-    );
-
-    final matches = prepPattern.allMatches(working).toList();
+    final matches = _r.walletPrepPattern.allMatches(working).toList();
     for (final match in matches) {
       final hint = match.group(2)!.trim();
       final resolved = _resolveWalletByHint(hint);
@@ -579,7 +498,15 @@ class LocalTransactionParser {
     );
   }
 
+  static bool _containsAny(String text, List<String> terms) {
+    for (final t in terms) {
+      if (text.contains(t)) return true;
+    }
+    return false;
+  }
+
   static WalletModel? _resolveWalletByHint(String hint) {
+    final r = _r;
     final cleanHint = _removeDiacritics(hint.toLowerCase().trim());
     if (cleanHint.isEmpty) return null;
 
@@ -592,16 +519,13 @@ class LocalTransactionParser {
         return w;
       }
       // Aliases
-      if ((cleanHint.contains('tien mat') || cleanHint.contains('cash')) &&
-          (wNameClean.contains('tien mat') || wNameClean.contains('cash'))) {
+      if (_containsAny(cleanHint, r.cashTerms) &&
+          _containsAny(wNameClean, r.cashTerms)) {
         return w;
       }
-      if ((cleanHint.contains('bank') ||
-              cleanHint.contains('ngan hang') ||
-              cleanHint.contains('tai khoan')) &&
-          (wNameClean.contains('bank') ||
-              wNameClean.contains('ngan hang') ||
-              w.walletType.nameKey == 'wallet_type.bank')) {
+      if (_containsAny(cleanHint, r.bankHintTerms) &&
+          (_containsAny(wNameClean, r.bankWalletTerms) ||
+              w.walletType == 'bank')) {
         return w;
       }
     }
@@ -618,30 +542,22 @@ class LocalTransactionParser {
   // ─────────────────────────────────────────────────────────────────────────────
 
   static _LocationExtractionResult _extractLocation(String text) {
+    final r = _r;
     var working = text;
     String? location;
 
     // Prepositions: ở Highlands, tại Circle K, at Starbucks, in food court
-    final locPattern = RegExp(
-      r'(?:^|\s+)(ở|o|tại|tai|quán|quan|tiệm|tiem|cửa hàng|cua hang|at|in|from)\s+([^,]+)',
-      caseSensitive: false,
-    );
-
-    final match = locPattern.firstMatch(working);
+    final match = r.locationPattern.firstMatch(working);
     if (match != null) {
-      final prep = match.group(1)!;
+      final prep = _removeDiacritics(match.group(1)!.toLowerCase());
       final rawLoc = match.group(2)!.trim();
 
       // Check that it's not a common category word (e.g. "quán cafe" -> cafe is category, not location)
       final normLoc = _removeDiacritics(rawLoc.toLowerCase());
-      if (prep.toLowerCase() == 'quán' || prep.toLowerCase() == 'quan') {
-        if (normLoc == 'cafe' ||
-            normLoc == 'ca phe' ||
-            normLoc == 'an' ||
-            normLoc == 'nhau') {
-          // Keep as content
-          return _LocationExtractionResult(location: null, remainingText: text);
-        }
+      if (r.locationQuanPrepositions.contains(prep) &&
+          r.locationQuanExceptions.contains(normLoc)) {
+        // Keep as content
+        return _LocationExtractionResult(location: null, remainingText: text);
       }
 
       location = rawLoc;
@@ -659,28 +575,17 @@ class LocalTransactionParser {
   // ─────────────────────────────────────────────────────────────────────────────
 
   static String _cleanContent(String text, int type, String locale) {
+    final r = _r;
     var working = text;
 
     // Strip leading action verbs
-    final leadingVerbs = RegExp(
-      r'^(?:mua hộ|mua ho|mua|ăn|an|uống|uong|trả|tra|thanh toán|thanh toan|chi|đi|di|đổ|do|nạp|nap|thuê|thue|gửi|gui|bán|ban|được tặng|duoc tang|được cho|duoc cho|nhận|nhan|thu|bought|buy|paid|pay|spent|spend|ate|eat|had|drank|drink|ordered|order|got|received)\s+',
-      caseSensitive: false,
-    );
-    working = working.replaceFirst(leadingVerbs, '');
+    working = working.replaceFirst(r.leadingVerbRegex, '');
 
-    // Strip common filler words
-    final fillers = RegExp(
-      r'\b(?:tiền|tien|cho mình|cho minh|hết|het|mất|mat|mình|minh|tôi|toi|for|a|an|the)\b',
-      caseSensitive: false,
-    );
     // Don't strip 'tiền' if it's 'tiền nhà', 'tiền điện', 'tiền nước', 'tiền mạng'
     final norm = _removeDiacritics(working.toLowerCase());
-    if (!norm.contains('tien nha') &&
-        !norm.contains('tien dien') &&
-        !norm.contains('tien nuoc') &&
-        !norm.contains('tien mang') &&
-        !norm.contains('tien hoc')) {
-      working = working.replaceAll(fillers, ' ');
+    if (!_containsAny(norm, r.keepTienPhrases)) {
+      // Strip common filler words
+      working = working.replaceAll(r.fillerRegex, ' ');
     }
 
     working = _clean(working);
@@ -698,8 +603,17 @@ class LocalTransactionParser {
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 8. CATEGORY CLASSIFICATION (35 CANONICAL CATEGORIES)
+  // 8. CATEGORY CLASSIFICATION
   // ─────────────────────────────────────────────────────────────────────────────
+
+  static int? _firstMatch(List<CategoryAliases> groups, String text) {
+    for (final g in groups) {
+      for (final kw in g.keywords) {
+        if (_hasWordOrPhrase(text, kw)) return g.id;
+      }
+    }
+    return null;
+  }
 
   static int _resolveMasterCategoryId(
     String content,
@@ -707,57 +621,33 @@ class LocalTransactionParser {
     int type,
     String locale,
   ) {
+    final r = _r;
     final textNorm = _removeDiacritics(content.toLowerCase());
     final fullNorm = fullSentenceNormalized;
-    final categories = MasterDataStore()
-        .categories
-        .where((c) => c.type == type)
-        .toList()
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
-    var bestCategoryId = type == AppConstants.INCOME ? 35 : 34;
-    var bestScore = 0;
-
-    for (final category in categories) {
-      final candidates = <String>{
-        category.name,
-        ...category.keywords,
-      };
-
-      for (final candidate in candidates) {
-        final keyword = _removeDiacritics(candidate.toLowerCase().trim());
-        if (keyword.isEmpty) continue;
-
-        final textScore = _keywordScore(textNorm, keyword, sourceWeight: 100);
-        final fullScore = _keywordScore(fullNorm, keyword, sourceWeight: 10);
-        final score = textScore > fullScore ? textScore : fullScore;
-
-        if (score > bestScore ||
-            (score == bestScore &&
-                score > 0 &&
-                category.sortOrder <
-                    (categories
-                            .where((c) => c.id == bestCategoryId)
-                            .firstOrNull
-                            ?.sortOrder ??
-                        9999))) {
-          bestScore = score;
-          bestCategoryId = category.id;
+    if (type == AppConstants.INCOME) {
+      for (final g in r.incomeCategories) {
+        for (final kw in g.keywords) {
+          if (_hasWordOrPhrase(textNorm, kw) ||
+              _hasWordOrPhrase(fullNorm, kw)) {
+            return g.id;
+          }
         }
       }
+      return r.defaultIncomeCategory;
     }
 
-    return bestCategoryId;
-  }
+    // Expense: 1. khớp theo nội dung chính (textNorm): nhóm general trước rồi tới specific
+    var id = _firstMatch(r.expenseGeneralCategories, textNorm) ??
+        _firstMatch(r.expenseSpecificCategories, textNorm);
+    if (id != null) return id;
 
-  static int _keywordScore(
-    String text,
-    String keyword, {
-    required int sourceWeight,
-  }) {
-    if (!_hasWordOrPhrase(text, keyword)) return 0;
-    final phraseBonus = keyword.contains(' ') ? 50 : 0;
-    return sourceWeight + phraseBonus + keyword.length;
+    // 2. Khớp theo cả câu nếu nội dung chính chưa xác định được
+    id = _firstMatch(r.expenseGeneralCategories, fullNorm) ??
+        _firstMatch(r.expenseSpecificCategories, fullNorm);
+    if (id != null) return id;
+
+    return r.defaultExpenseCategory;
   }
 
   static bool _hasWordOrPhrase(String text, String keyword) {
@@ -784,25 +674,7 @@ class LocalTransactionParser {
     return values.join(' ');
   }
 
-  static String _removeDiacritics(String value) {
-    var result = value;
-    const groups = {
-      'a': 'àáạảãâầấậẩẫăằắặẳẵ',
-      'e': 'èéẹẻẽêềếệểễ',
-      'i': 'ìíịỉĩ',
-      'o': 'òóọỏõôồốộổỗơờớợởỡ',
-      'u': 'ùúụủũưừứựửữ',
-      'y': 'ỳýỵỷỹ',
-      'd': 'đ',
-    };
-    for (final entry in groups.entries) {
-      for (final char in entry.value.split('')) {
-        result = result.replaceAll(char, entry.key);
-        result = result.replaceAll(char.toUpperCase(), entry.key.toUpperCase());
-      }
-    }
-    return result;
-  }
+  static String _removeDiacritics(String value) => removeDiacriticsVi(value);
 
   static String _categoryLocale(String locale) {
     final normalized = locale.toLowerCase();

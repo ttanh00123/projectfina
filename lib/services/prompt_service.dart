@@ -21,7 +21,7 @@ Future<PromptResult?> sendPrompt(String text, int userId, String token) async {
     locale: languageCode,
   );
   // if (localResult != null) {
-    return localResult;
+  return localResult;
   // }
 
   // 2. Fallback sang backend LLM nếu câu phức tạp vượt quá khả năng bóc tách offline

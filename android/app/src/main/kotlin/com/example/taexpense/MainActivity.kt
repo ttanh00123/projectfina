@@ -1,4 +1,4 @@
-package com.example.taexpense
+package top.t2expense
 
 import io.flutter.embedding.android.FlutterActivity
 

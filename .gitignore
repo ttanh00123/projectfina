@@ -62,4 +62,6 @@ app.*.map.json
 /android/app/.metadata
 /android/app/build/
 /macos/
+/linux/
+/windows/
 trungt_notes.txt

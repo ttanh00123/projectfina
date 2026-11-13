@@ -18,7 +18,7 @@ This guide explains how to configure Google and Facebook OAuth for your Flutter 
    ```bash
    keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
    ```
-4. Enter package name: `com.example.taexpense` (or your actual package)
+4. Enter package name: `top.t2expense` (or your actual package)
 5. Enter SHA-1 fingerprint
 6. Save the client ID
 
@@ -97,7 +97,7 @@ async def google_auth(data: dict):
 #### For Android:
 1. In Facebook App Dashboard → Settings → Basic
 2. Add Android platform
-3. Enter package name: `com.example.taexpense`
+3. Enter package name: `top.t2expense`
 4. Get your key hash:
    ```bash
    keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore | openssl sha1 -binary | openssl base64

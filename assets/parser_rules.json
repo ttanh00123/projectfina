@@ -1,0 +1,899 @@
+{
+  "schemaVersion": 1,
+  "version": 1,
+  "minEngine": 1,
+  "name": "vi-default",
+  "relativeDays": {
+    "hôm kia": -2,
+    "hom kia": -2,
+    "the day before yesterday": -2,
+    "hôm qua": -1,
+    "hom qua": -1,
+    "tối qua": -1,
+    "toi qua": -1,
+    "sáng qua": -1,
+    "sang qua": -1,
+    "chiều qua": -1,
+    "chieu qua": -1,
+    "yesterday": -1,
+    "last night": -1,
+    "hôm nay": 0,
+    "hom nay": 0,
+    "sáng nay": 0,
+    "sang nay": 0,
+    "trưa nay": 0,
+    "trua nay": 0,
+    "chiều nay": 0,
+    "chieu nay": 0,
+    "tối nay": 0,
+    "toi nay": 0,
+    "today": 0,
+    "this morning": 0,
+    "this afternoon": 0,
+    "tonight": 0
+  },
+  "nDaysAgoUnits": [
+    "ngày trước",
+    "ngay truoc",
+    "days ago"
+  ],
+  "currencySymbols": {
+    "$": "USD",
+    "s$": "SGD",
+    "us$": "USD",
+    "a$": "AUD",
+    "₫": "VND",
+    "đ": "VND",
+    "€": "EUR",
+    "£": "GBP",
+    "¥": "JPY"
+  },
+  "amountUnits": [
+    {
+      "u": "k",
+      "mult": 1000
+    },
+    {
+      "u": "nghìn",
+      "mult": 1000
+    },
+    {
+      "u": "nghin",
+      "mult": 1000
+    },
+    {
+      "u": "ngàn",
+      "mult": 1000
+    },
+    {
+      "u": "ngan",
+      "mult": 1000
+    },
+    {
+      "u": "tr",
+      "mult": 1000000
+    },
+    {
+      "u": "triệu",
+      "mult": 1000000
+    },
+    {
+      "u": "trieu",
+      "mult": 1000000
+    },
+    {
+      "u": "m",
+      "mult": 1000000
+    },
+    {
+      "u": "củ",
+      "mult": 1000000
+    },
+    {
+      "u": "cu",
+      "mult": 1000000
+    },
+    {
+      "u": "lít",
+      "mult": 100000
+    },
+    {
+      "u": "lit",
+      "mult": 100000
+    },
+    {
+      "u": "xị",
+      "mult": 100000
+    },
+    {
+      "u": "xi",
+      "mult": 100000
+    },
+    {
+      "u": "tỷ",
+      "mult": 1000000000
+    },
+    {
+      "u": "ty",
+      "mult": 1000000000
+    },
+    {
+      "u": "b",
+      "mult": 1000000000
+    },
+    {
+      "u": "đ",
+      "currency": "VND"
+    },
+    {
+      "u": "₫",
+      "currency": "VND"
+    },
+    {
+      "u": "vnd",
+      "currency": "VND"
+    },
+    {
+      "u": "usd",
+      "currency": "USD"
+    },
+    {
+      "u": "sgd",
+      "currency": "SGD"
+    },
+    {
+      "u": "eur",
+      "currency": "EUR"
+    },
+    {
+      "u": "gbp",
+      "currency": "GBP"
+    },
+    {
+      "u": "dollar",
+      "currency": "USD"
+    },
+    {
+      "u": "dollars",
+      "currency": "USD"
+    },
+    {
+      "u": "buck",
+      "currency": "USD"
+    },
+    {
+      "u": "bucks",
+      "currency": "USD"
+    }
+  ],
+  "transferIntentKeywords": [
+    "chuyen khoan",
+    "chuyen tien",
+    "chuyen",
+    "rut tien",
+    "rut",
+    "ban tien",
+    "transfer",
+    "transferred",
+    "send money",
+    "sent money",
+    "withdraw",
+    "move money",
+    "moved money"
+  ],
+  "incomeIntentKeywords": [
+    "nhan luong",
+    "luong",
+    "thuong",
+    "nhan tien",
+    "nhan",
+    "thu nhap",
+    "ban hang",
+    "co tuc",
+    "lai",
+    "duoc tang",
+    "duoc cho",
+    "salary",
+    "paycheck",
+    "bonus",
+    "income",
+    "received",
+    "cashback",
+    "dividend",
+    "sold",
+    "wage"
+  ],
+  "transferVerbs": [
+    "chuyển khoản",
+    "chuyen khoan",
+    "chuyển tiền",
+    "chuyen tien",
+    "chuyển",
+    "chuyen",
+    "rút tiền",
+    "rut tien",
+    "rút",
+    "rut",
+    "bắn tiền",
+    "transfer",
+    "transferred",
+    "send",
+    "withdraw",
+    "move"
+  ],
+  "transferFromWords": [
+    "từ",
+    "tu",
+    "from"
+  ],
+  "transferToWords": [
+    "sang",
+    "đến",
+    "den",
+    "tới",
+    "toi",
+    "qua",
+    "vào",
+    "vao",
+    "về",
+    "ve",
+    "to"
+  ],
+  "withdrawHints": [
+    "rut",
+    "withdraw"
+  ],
+  "walletPrepositions": [
+    "bằng ví",
+    "bang vi",
+    "bằng",
+    "bang",
+    "qua",
+    "từ",
+    "tu",
+    "ví",
+    "vi",
+    "using",
+    "via",
+    "with",
+    "by",
+    "through"
+  ],
+  "walletAliases": {
+    "cash": [
+      "tien mat",
+      "cash"
+    ],
+    "bankHint": [
+      "bank",
+      "ngan hang",
+      "tai khoan"
+    ],
+    "bankWallet": [
+      "bank",
+      "ngan hang"
+    ]
+  },
+  "locationPrepositions": [
+    "ở",
+    "o",
+    "tại",
+    "tai",
+    "quán",
+    "quan",
+    "tiệm",
+    "tiem",
+    "cửa hàng",
+    "cua hang",
+    "at",
+    "in",
+    "from"
+  ],
+  "locationQuanPrepositions": [
+    "quán",
+    "quan"
+  ],
+  "locationQuanExceptions": [
+    "cafe",
+    "ca phe",
+    "an",
+    "nhau"
+  ],
+  "leadingVerbs": [
+    "mua hộ",
+    "mua ho",
+    "mua",
+    "ăn",
+    "an",
+    "uống",
+    "uong",
+    "trả",
+    "tra",
+    "thanh toán",
+    "thanh toan",
+    "chi",
+    "đi",
+    "di",
+    "đổ",
+    "do",
+    "nạp",
+    "nap",
+    "thuê",
+    "thue",
+    "gửi",
+    "gui",
+    "bán",
+    "ban",
+    "được tặng",
+    "duoc tang",
+    "được cho",
+    "duoc cho",
+    "nhận",
+    "nhan",
+    "thu",
+    "bought",
+    "buy",
+    "paid",
+    "pay",
+    "spent",
+    "spend",
+    "ate",
+    "eat",
+    "had",
+    "drank",
+    "drink",
+    "ordered",
+    "order",
+    "got",
+    "received"
+  ],
+  "fillerWords": [
+    "tiền",
+    "tien",
+    "cho mình",
+    "cho minh",
+    "hết",
+    "het",
+    "mất",
+    "mat",
+    "mình",
+    "minh",
+    "tôi",
+    "toi",
+    "for",
+    "a",
+    "an",
+    "the"
+  ],
+  "keepTienPhrases": [
+    "tien nha",
+    "tien dien",
+    "tien nuoc",
+    "tien mang",
+    "tien hoc"
+  ],
+  "defaultIncomeCategory": 35,
+  "defaultExpenseCategory": 34,
+  "incomeCategories": [
+    {
+      "id": 1,
+      "keywords": [
+        "luong",
+        "salary",
+        "paycheck",
+        "wage"
+      ]
+    },
+    {
+      "id": 2,
+      "keywords": [
+        "thuong",
+        "bonus",
+        "reward"
+      ]
+    },
+    {
+      "id": 3,
+      "keywords": [
+        "tro cap",
+        "phu cap",
+        "allowance",
+        "stipend"
+      ]
+    },
+    {
+      "id": 4,
+      "keywords": [
+        "kinh doanh",
+        "ban hang",
+        "doanh thu",
+        "business",
+        "sales",
+        "revenue"
+      ]
+    },
+    {
+      "id": 5,
+      "keywords": [
+        "dau tu",
+        "co tuc",
+        "chung khoan",
+        "crypto",
+        "investment",
+        "dividend",
+        "interest",
+        "stock"
+      ]
+    },
+    {
+      "id": 6,
+      "keywords": [
+        "thu nhap thu dong",
+        "cho thue",
+        "passive income",
+        "rental income",
+        "royalty"
+      ]
+    },
+    {
+      "id": 7,
+      "keywords": [
+        "qua tang",
+        "duoc tang",
+        "mung tuoi",
+        "li xi",
+        "gift",
+        "present",
+        "gift money"
+      ]
+    },
+    {
+      "id": 8,
+      "keywords": [
+        "thu khac",
+        "cashback",
+        "hoan tien",
+        "other income"
+      ]
+    }
+  ],
+  "expenseGeneralCategories": [
+    {
+      "id": 9,
+      "keywords": [
+        "cafe",
+        "ca phe",
+        "coffee",
+        "kopi",
+        "tra sua",
+        "milk tea",
+        "tra",
+        "tea",
+        "pho",
+        "bun",
+        "com",
+        "banh mi",
+        "an trua",
+        "an toi",
+        "an sang",
+        "an",
+        "uong",
+        "lunch",
+        "dinner",
+        "breakfast",
+        "meal",
+        "food",
+        "drink",
+        "highlands",
+        "starbucks",
+        "phuc long",
+        "haidilao",
+        "pizza",
+        "burger",
+        "kfc",
+        "lotteria",
+        "jollibee",
+        "mcdonald",
+        "restaurant",
+        "nha hang",
+        "quan an",
+        "lau",
+        "nuong",
+        "bbq",
+        "sushi",
+        "sashimi",
+        "ramen",
+        "snack",
+        "hawker",
+        "food court",
+        "vit quay"
+      ]
+    },
+    {
+      "id": 10,
+      "keywords": [
+        "grab",
+        "be",
+        "gojek",
+        "taxi",
+        "xe bus",
+        "bus",
+        "ve xe",
+        "gui xe",
+        "bai xe",
+        "metro",
+        "tau hoa",
+        "tau",
+        "uber",
+        "parking",
+        "transport",
+        "ride",
+        "fare"
+      ]
+    }
+  ],
+  "expenseSpecificCategories": [
+    {
+      "id": 28,
+      "keywords": [
+        "tien nha",
+        "tien phong",
+        "thue nha",
+        "thue tro",
+        "chung cu",
+        "rent",
+        "house rent",
+        "apartment"
+      ]
+    },
+    {
+      "id": 29,
+      "keywords": [
+        "tien dien",
+        "dien luc",
+        "evn",
+        "electricity",
+        "electric bill",
+        "power bill"
+      ]
+    },
+    {
+      "id": 30,
+      "keywords": [
+        "tien nuoc",
+        "nuoc sinh hoat",
+        "water bill"
+      ]
+    },
+    {
+      "id": 11,
+      "keywords": [
+        "nap dien thoai",
+        "tien dien thoai",
+        "cuoc dien thoai",
+        "viettel",
+        "vinaphone",
+        "mobifone",
+        "sim",
+        "4g",
+        "5g",
+        "phone bill",
+        "top up",
+        "topup",
+        "mobile bill"
+      ]
+    },
+    {
+      "id": 12,
+      "keywords": [
+        "tien mang",
+        "internet",
+        "wifi",
+        "fpt",
+        "vnpt",
+        "cap quang",
+        "broadband"
+      ]
+    },
+    {
+      "id": 13,
+      "keywords": [
+        "do xang",
+        "xang dau",
+        "xang",
+        "gasoline",
+        "petrol",
+        "fuel",
+        "gas station"
+      ]
+    },
+    {
+      "id": 31,
+      "keywords": [
+        "hoc phi",
+        "tien hoc",
+        "khoa hoc",
+        "sach vo",
+        "gia su",
+        "tuition",
+        "school fee",
+        "course",
+        "textbook"
+      ]
+    },
+    {
+      "id": 32,
+      "keywords": [
+        "bao hiem",
+        "bhyt",
+        "bhxh",
+        "insurance",
+        "life insurance"
+      ]
+    },
+    {
+      "id": 33,
+      "keywords": [
+        "tra gop",
+        "lai suat",
+        "vay",
+        "installment",
+        "credit loan"
+      ]
+    },
+    {
+      "id": 27,
+      "keywords": [
+        "phi phat",
+        "phat nguoi",
+        "giao thong phat",
+        "penalty",
+        "fine",
+        "traffic ticket"
+      ]
+    },
+    {
+      "id": 20,
+      "keywords": [
+        "dam cuoi",
+        "mung cuoi",
+        "sinh nhat",
+        "thoi noi",
+        "hieu hi",
+        "wedding",
+        "birthday party",
+        "anniversary"
+      ]
+    },
+    {
+      "id": 19,
+      "keywords": [
+        "chu cap",
+        "gui tien bo me",
+        "cho con",
+        "family support",
+        "child support"
+      ]
+    },
+    {
+      "id": 18,
+      "keywords": [
+        "du lich",
+        "ve may bay",
+        "khach san",
+        "resort",
+        "homestay",
+        "tour",
+        "flight ticket",
+        "hotel",
+        "travel",
+        "vacation",
+        "airbnb"
+      ]
+    },
+    {
+      "id": 17,
+      "keywords": [
+        "xem phim",
+        "rap chieu phim",
+        "cgv",
+        "lotte cinema",
+        "ve phim",
+        "netflix",
+        "spotify",
+        "youtube premium",
+        "game",
+        "nap game",
+        "steam",
+        "cinema",
+        "movie",
+        "gaming"
+      ]
+    },
+    {
+      "id": 16,
+      "keywords": [
+        "my pham",
+        "lam dep",
+        "cat toc",
+        "lam toc",
+        "barber",
+        "salon",
+        "spa",
+        "nail",
+        "skincare",
+        "haircut",
+        "cosmetic",
+        "beauty"
+      ]
+    },
+    {
+      "id": 15,
+      "keywords": [
+        "quan ao",
+        "trang phuc",
+        "giay dep",
+        "ao",
+        "quan jean",
+        "quan tay",
+        "ao so mi",
+        "ao thun",
+        "ao khoac",
+        "vay",
+        "dam",
+        "uniqlo",
+        "zara",
+        "h&m",
+        "clothes",
+        "clothing",
+        "shoes",
+        "sneakers",
+        "shirt",
+        "t-shirt",
+        "dress",
+        "jacket"
+      ]
+    },
+    {
+      "id": 14,
+      "keywords": [
+        "sieu thi",
+        "tap hoa",
+        "nhu yeu pham",
+        "vinmart",
+        "winmart",
+        "bach hoa xanh",
+        "coopmart",
+        "big c",
+        "go!",
+        "cho",
+        "rau",
+        "thit",
+        "supermarket",
+        "grocery",
+        "groceries",
+        "market"
+      ]
+    },
+    {
+      "id": 21,
+      "keywords": [
+        "kham benh",
+        "benh vien",
+        "bac si",
+        "xet nghiem",
+        "nha khoa",
+        "rang",
+        "hospital",
+        "clinic",
+        "doctor",
+        "dental",
+        "medical",
+        "checkup"
+      ]
+    },
+    {
+      "id": 22,
+      "keywords": [
+        "thuoc men",
+        "thuoc",
+        "nha thuoc",
+        "pharmacity",
+        "long chau",
+        "pharmacy",
+        "medicine",
+        "drugstore"
+      ]
+    },
+    {
+      "id": 23,
+      "keywords": [
+        "tap luyen",
+        "gym",
+        "fitness",
+        "yoga",
+        "boi",
+        "cau long",
+        "da bong",
+        "tennis",
+        "the thao",
+        "workout",
+        "pilates",
+        "sport"
+      ]
+    },
+    {
+      "id": 25,
+      "keywords": [
+        "sua chua",
+        "sua xe",
+        "bao duong",
+        "thay nhot",
+        "rua xe",
+        "repair",
+        "maintenance",
+        "car wash",
+        "fix"
+      ]
+    },
+    {
+      "id": 26,
+      "keywords": [
+        "tai nan",
+        "va cham",
+        "den bu",
+        "accident",
+        "collision"
+      ]
+    },
+    {
+      "id": 24,
+      "keywords": [
+        "quy lop",
+        "dong quy",
+        "tu thien",
+        "fund",
+        "charity",
+        "donation"
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "input": "ăn phở 35k",
+      "type": "expense",
+      "amount": 35000,
+      "category": 9
+    },
+    {
+      "input": "lương tháng 10 15tr",
+      "type": "income",
+      "amount": 15000000,
+      "category": 1
+    },
+    {
+      "input": "grab 85.000",
+      "type": "expense",
+      "amount": 85000,
+      "category": 10
+    },
+    {
+      "input": "chuyển khoản 2tr",
+      "type": "transfer",
+      "amount": 2000000
+    },
+    {
+      "input": "$15 coffee",
+      "type": "expense",
+      "amount": 15,
+      "currency": "USD",
+      "category": 9
+    },
+    {
+      "input": "nhận thưởng 3 triệu",
+      "type": "income",
+      "amount": 3000000,
+      "category": 2
+    }
+  ]
+}
