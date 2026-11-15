@@ -204,8 +204,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get ok => 'OK';
 
   @override
-  String get chatbotWelcomeMessage =>
-      'Xin chào! Hãy kể cho tôi về một giao dịch — bạn có thể nhập tay hoặc nhấn vào biểu tượng mic và nói\n\nVí dụ: \"Cafe ở T1 35k\" hoặc \"Lương 15 triệu\"';
+  String get chatbotWelcomeMessage => 'Xin chào! Hãy kể cho tôi về một giao dịch — bạn có thể nhập tay hoặc nhấn vào biểu tượng mic và nói\n\nVí dụ: \"Cafe ở T1 35k\" hoặc \"Lương 15 triệu\"';
 
   @override
   String get chatbotName => 'Trợ lý FinA';

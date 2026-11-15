@@ -180,8 +180,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteTransaction => 'Delete Transaction';
 
   @override
-  String get confirmDelete =>
-      'Are you sure you want to delete this transaction?';
+  String get confirmDelete => 'Are you sure you want to delete this transaction?';
 
   @override
   String get yes => 'Yes';
@@ -205,8 +204,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ok => 'OK';
 
   @override
-  String get chatbotWelcomeMessage =>
-      'Hi! Tell me about a transaction — you can type or tap the mic 🎙️\n\nExample: \"Cafe 6 dollars at T1\" or \"Received salary 35k\"';
+  String get chatbotWelcomeMessage => 'Hi! Tell me about a transaction — you can type or tap the mic 🎙️\n\nExample: \"Cafe 6 dollars at T1\" or \"Received salary 35k\"';
 
   @override
   String get chatbotName => 'FinA Assistant';
