@@ -20,6 +20,8 @@ class AppConstants {
 
   //PROMPT
   static const String PROMPT_API = "$BASE_URL/transactions/prompt";
+  static const String CATEGORY_CLASSIFICATION_API =
+      "$BASE_URL/categorize";
 
   static const int EXPENSE = 0;
   static const int INCOME = 1;

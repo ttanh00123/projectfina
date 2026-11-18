@@ -1,70 +1,62 @@
-import 'dart:convert';
-
-import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
-import 'package:http_status_code/http_status_code.dart';
 import 'package:taexpense/app_constants.dart';
 import 'package:taexpense/models/prompt_result.dart';
-import 'package:taexpense/services/settings_service.dart';
-import 'package:taexpense/utils/utils.dart';
-
 import 'package:taexpense/services/local_transaction_parser.dart';
+import 'package:taexpense/services/master_data_store.dart';
+import 'package:taexpense/services/parser_rules.dart';
+import 'package:taexpense/services/remote_categorizer.dart';
+import 'package:taexpense/services/settings_service.dart';
 
-Future<PromptResult?> sendPrompt(String text, int userId, String token) async {
+final _defaultRemoteCategorizer = RemoteCategorizer(
+  endpoint: Uri.parse(AppConstants.CATEGORY_CLASSIFICATION_API),
+);
+
+Future<PromptResult?> sendPrompt(
+  String text,
+  int userId,
+  String token, {
+  RemoteCategorizer? remoteCategorizer,
+}) async {
   final currency = await SettingsService.getCurrency();
   final languageCode = await SettingsService.getLocale();
 
-  // 1. Local-First Parser (Chạy trực tiếp offline trên thiết bị, tức thì < 5ms)
   final localResult = LocalTransactionParser.parse(
     text,
     defaultCurrency: currency,
     locale: languageCode,
   );
-  // if (localResult != null) {
-  return localResult;
-  // }
+  if (localResult == null) return null;
 
-  // 2. Fallback sang backend LLM nếu câu phức tạp vượt quá khả năng bóc tách offline
-  // try {
-  //   final r = await http
-  //       .post(
-  //         Uri.parse(AppConstants.PROMPT_API),
-  //         headers: Utils.buildRequestHeader(token),
-  //         body: jsonEncode({
-  //           "text": text,
-  //           "user_id": userId,
-  //           "currency": currency,
-  //           "language_code": languageCode,
-  //         }),
-  //       )
-  //       .timeout(const Duration(seconds: 30));
-  //   if (r.statusCode == StatusCode.OK) {
-  //     return PromptResult.fromJson(jsonDecode(r.body));
-  //   }
-  //   throw ApiException(Utils.extractError(r), statusCode: r.statusCode);
-  // } catch (e) {
-  //   // Nếu mất mạng hoặc API lỗi, thử lại fallback cục bộ với best-effort
-  //   if (localResult != null) {
-  //     return localResult;
-  //   }
-  //   rethrow;
-  // }
+  final transaction = localResult.data;
+  if (transaction.type == AppConstants.TRANSFER) return localResult;
 
-// Fake AI response for testing
-  // var dummy = '''{
-  //       "request_id": "b315b536-4f83-41ac-9bcc-d61db7b198b7",
-  //       "user_prompt": "Cafe at Master Hall 8 dollars",
-  //       "data": {
-  //           "type": "expense",
-  //           "amount": 8.0,
-  //           "currency": "SGD",
-  //           "address": "Cafe at Master Hall",
-  //           "date_time": "2026-05-06T00:00:00Z",
-  //           "master_category_id": 9,
-  //           "content": "Cafe at Master Hall",
-  //           "tags": "Personal",
-  //           "notes": null
-  //       }
-  //   }''';
-  // return PromptResult.fromJson(jsonDecode(dummy));
+  final rules = ParserRulesStore.current;
+  final fallbackCategoryId = transaction.type == AppConstants.INCOME
+      ? rules.defaultIncomeCategory
+      : rules.defaultExpenseCategory;
+  if (transaction.category != fallbackCategoryId) return localResult;
+
+  final allowedCategoryIds = MasterDataStore()
+      .categories
+      .where((category) =>
+          (category.type == transaction.type || category.type == 2) &&
+          category.id != rules.defaultExpenseCategory &&
+          category.id != rules.defaultIncomeCategory)
+      .map((category) => category.id)
+      .toSet();
+
+  final categoryId = await (remoteCategorizer ?? _defaultRemoteCategorizer)
+      .categorize(
+    text: text,
+    isIncome: transaction.type == AppConstants.INCOME,
+    allowedIds: allowedCategoryIds,
+    authToken: token,
+    locale: languageCode,
+  );
+  if (categoryId == null) return localResult;
+
+  return PromptResult(
+    requestId: localResult.requestId,
+    userPrompt: localResult.userPrompt,
+    data: transaction.copyWith(category: categoryId),
+  );
 }

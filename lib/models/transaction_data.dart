@@ -120,6 +120,7 @@ class TransactionData {
     WalletModel? wallet,
     WalletModel? toWallet,
     double? receiveAmount,
+    int? category,
   }) {
     return TransactionData(
       requestId: requestId,
@@ -131,7 +132,7 @@ class TransactionData {
       toWallet: toWallet ?? this.toWallet,
       receiveAmount: receiveAmount ?? this.receiveAmount,
       dateTime: dateTime,
-      category: category,
+      category: category ?? this.category,
       note: note,
     );
   }
